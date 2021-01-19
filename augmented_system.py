@@ -6,8 +6,3 @@ def aug_matrix(A, Mp, n, m):
     aux1 = np.hstack((P.transpose(), np.zeros((m,m)))) 
 
     return np.vstack((aux, aux1))
-
-    
-
-
-# %%
