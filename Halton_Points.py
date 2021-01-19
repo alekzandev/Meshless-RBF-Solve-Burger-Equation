@@ -92,26 +92,26 @@ def gaussian(x, y):
 
 # %%
 
-x = haltonPoints(2, 25)[:, 0]
-y = haltonPoints(2, 25)[:, 1]
-x, y = np.meshgrid(x, y)
-z = gaussian(x, y)
-fig = plt.figure()
-ax = fig.gca(projection='3d')
+# x = haltonPoints(2, 25)[:, 0]
+# y = haltonPoints(2, 25)[:, 1]
+# x, y = np.meshgrid(x, y)
+# z = gaussian(x, y)
+# fig = plt.figure()
+# ax = fig.gca(projection='3d')
 
-surf = ax.plot_surface(x, y, z, cmap=cm.coolwarm,
-                       linewidth=0, antialiased=False)
+# surf = ax.plot_surface(x, y, z, cmap=cm.coolwarm,
+#                        linewidth=0, antialiased=False)
 
-# ax.plot_wireframe(x, y, z, rstride=10, cstride=10)
+# # ax.plot_wireframe(x, y, z, rstride=10, cstride=10)
 
-ax.set_zlim(-1.01, 1.01)
-ax.zaxis.set_major_locator(LinearLocator(10))
-ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+# ax.set_zlim(-1.01, 1.01)
+# ax.zaxis.set_major_locator(LinearLocator(10))
+# ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
 
-fig.colorbar(surf, shrink=0.5, aspect=5)
-plt.show()
+# fig.colorbar(surf, shrink=0.5, aspect=5)
+# plt.show()
 
-# %%
-plt.scatter(x,y)
-plt.show()
-# %%
+# # %%
+# plt.scatter(x,y)
+# plt.show()
+# # %%

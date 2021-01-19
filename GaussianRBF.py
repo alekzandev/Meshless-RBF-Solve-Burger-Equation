@@ -2,11 +2,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from Halton_Points import haltonPoints
+from augmented_system import aug_matrix
 
 #%%
-
-x = haltonPoints(2, 4)[:,0]
-y = haltonPoints(2, 4)[:, 1]
+n = 256
+MHp = haltonPoints(2, n)
+x, y = MHp[:, 0], MHp[:, 1]
 
 
 # %%
@@ -22,7 +23,7 @@ def distanceMatrix2D(n):
     return my_matrix.reshape(n,n)
 
 # %%
-def GaussianRBF(n, e):
+def GaussianRBF(n, e=1):
      M = distanceMatrix2D(n)
      return np.exp(-(e*M)**2)
 
