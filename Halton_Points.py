@@ -80,16 +80,6 @@ def haltonPoints(dim, n_sample):
 
     return sample
 
-
-def gaussian(x, y):
-    mux = np.mean(x)
-    muy = np.mean(y)
-    sx = np.std(x)
-    sy = np.std(y)
-    r = -((x-mux)**2/(2*sx**2) + (y-muy)**2/(2*sy**2))
-    return np.exp(r)
-
-
 # %%
 
 # x = haltonPoints(2, 25)[:, 0]
