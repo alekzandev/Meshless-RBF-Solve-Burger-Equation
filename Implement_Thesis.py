@@ -44,7 +44,6 @@ class RungeKutta_implicit(Onestepmethod):
         '''
         M = 10
         stageDer = np.array(self.s*[self.f(t0, y0)])  # Initial value Y'_0
-        print(stageDer)
         #J = nd.Jacobian(self.f)([t0, y0[0]])
         J = nd.Jacobian(self.f, t0, y0)
         stageVal = self.phi_solve(t0, y0, stageDer, J, M)
