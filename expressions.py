@@ -66,7 +66,6 @@ class terms_uh(object):
 
     def Sinv(self):
         MQ1 = np.hstack((self.M(), self.Q1()))
-        print(np.linalg.det(self.K1() - np.matmul(np.matmul(MQ1, np.linalg.inv(self.A())), MQ1.transpose())))
         return np.linalg.inv(self.K1() - np.matmul(np.matmul(MQ1, np.linalg.inv(self.A())), MQ1.transpose()))
 
     def C(self):
@@ -114,8 +113,17 @@ class implementation(terms_uh):
 
 x_i = np.array([2, 3, 2]).reshape(-1, 1)
 y_i = np.array([1, 0, 3]).reshape(-1, 1)
-Mi =  HaltonPoints(2, 3).haltonPoints() #np.hstack((x_i, y_i))
-Mb = np.array([[0., 0.5], [1., 0.5], [0.5, 1.], [0.5, 0.]])
+Mi = HaltonPoints(2, 30).haltonPoints()  # np.hstack((x_i, y_i))
+Mb = np.array([
+    [0., 0.],
+    [0., 0.5],
+    [0., 1.],
+    [0.5, 1.],
+    [1., 1.],
+    [1., 0.5],
+    [1., 0.],
+    [0.5, 0.]
+])
 x = np.array([1.1, 2.3])
 
 M1 = np.array([
@@ -139,7 +147,7 @@ M1 = np.array([
 ])
 
 # print(implementation(Mi, Mb, 2, 0.3).K1())
-print(implementation(Mi, Mb, 2, 0.1, x).M())
+print(implementation(Mi, Mb, 2, 0.1, x).a_m())
 # MQ1 = implementation(Mi, Mb, 2, 0.1).B()
 # A = implementation(Mi, Mb, 2, 0.1).A()
 # Ainv = np.linalg.inv(A)
