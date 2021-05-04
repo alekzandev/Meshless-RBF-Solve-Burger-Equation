@@ -1,6 +1,10 @@
 # pylint: disable=E1101
+# pylint: disable=all
 
+import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator
 
 from halton_points import HaltonPoints
 
@@ -111,9 +115,44 @@ class implementation(terms_uh):
         return self.x - M
 
 
+class exact_solution(object):
+    def __init__(self, A=None, t=None, nu=None, radius=0.15, c_x=0.5, c_y=0.5):
+        self.A = A
+        self.x = A[:, 0]
+        self.y = A[:, 1]
+        self.t = t
+        self.nu = nu
+        self.radius = radius
+        self.c_x = c_x
+        self.c_y = c_y
+
+    def domain(self):
+        dist_from_center = np.sqrt(
+            (self.x - self.c_x)**2 + (self.y - self.c_y)**2)
+        mask = dist_from_center < self.radius
+        # mask_x = np.logical_and(
+        #     self.x > self.c_x - self.radius, self.x < self.c_x + self.radius)
+        # A = self.A.copy()
+        # A = A[mask]
+        # mask_y = np.logical_and(
+        #     A[:, 1] > self.c_y - self.radius, A[:, 1] < self.c_y + self.radius)
+        return self.A[mask]
+
+    def hopf_cole_transform(self):
+        Omega = self.domain()
+        x, y = Omega[:, 0], Omega[:, 1]
+        # x, y = np.meshgrid(x, y)
+        u = 3/4 - 1/4 * \
+            (1 / (1 + np.exp((4*y - 4*x - self.t) / (32*self.nu))))
+        v = 3/4 + 1/4 * \
+            (1 / (1 + np.exp((4*y - 4*x - self.t) / (32*self.nu))))
+
+        return u, v
+
+
 x_i = np.array([2, 3, 2]).reshape(-1, 1)
 y_i = np.array([1, 0, 3]).reshape(-1, 1)
-Mi = HaltonPoints(2, 30).haltonPoints()  # np.hstack((x_i, y_i))
+Mi = HaltonPoints(2, 700).haltonPoints()  # np.hstack((x_i, y_i))
 Mb = np.array([
     [0., 0.],
     [0., 0.5],
@@ -147,7 +186,7 @@ M1 = np.array([
 ])
 
 # print(implementation(Mi, Mb, 2, 0.3).K1())
-print(implementation(Mi, Mb, 2, 0.1, x).a_m())
+#print(implementation(Mi, Mb, 2, 0.1, x).a_m())
 # MQ1 = implementation(Mi, Mb, 2, 0.1).B()
 # A = implementation(Mi, Mb, 2, 0.1).A()
 # Ainv = np.linalg.inv(A)
@@ -167,3 +206,41 @@ print(implementation(Mi, Mb, 2, 0.1, x).a_m())
 
 
 #print(np.linalg.norm(x-Mb, axis=-1).reshape(-1, 1))
+#u1, u2 = exact_solution(A=Mi, t=0.2, nu=1.1).hopf_cole_transform()
+solution_domain = exact_solution(
+    A=Mi, radius=0.2, t=0.2, nu=1.01, c_x=0.6, c_y=0.7)
+Omega = solution_domain.domain()
+u, v = solution_domain.hopf_cole_transform()
+
+# fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+# X, Y = Omega[:, 0], Omega[:, 1]
+# Z = v.copy()
+
+# print(X.shape, Y.shape, Z.shape)
+# print(Omega)
+# plt.scatter(Omega[:, 0], Omega[:, 1])
+# plt.scatter(X, Y)
+# plt.xlim(0, 1)
+# plt.ylim(0, 1)
+
+
+# ax.plot_surface(X, Y, Z, rstride=8, cstride=8, alpha=0.3)
+# cs = ax.contourf(X, Y, Z)
+# ax.plot3D(X, Y, Z)
+# ax.contour(cs, colors = 'k')
+# ax.grid(c='k', ls='-', alpha=0.3)
+# ax.clabel(cs, inline=True, fontsize=10)
+# cset = ax.contourf(X, Y, Z, zdir='z', offset=-100, cmap=cm.coolwarm)
+# cset = ax.contourf(X, Y, Z, zdir='x', offset=-40, cmap=cm.coolwarm)
+# cset = ax.contourf(X, Y, Z, zdir='y', offset=40, cmap=cm.coolwarm)
+# ax.plot_trisurf(x, y, Z, linewidth=0.2, antialiased=True, cmap=plt.cm.Spectral)
+# ax.set_xlabel('X')
+# #ax.set_xlim(-40, 40)
+# ax.set_ylabel('Y')
+# #ax.set_ylim(-40, 40)
+# ax.set_zlabel('Z')
+# #ax.set_zlim(-100, 100)
+
+# plt.show()
+
+print(u.shape)
