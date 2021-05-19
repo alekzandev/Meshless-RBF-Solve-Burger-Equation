@@ -91,7 +91,7 @@ class terms_uh(object):
         return np.matmul(self.C(), np.vstack((self.gamma_m(), self.theta_m()))) - np.matmul(self.B().transpose(), np.matmul(self.Sinv(), self.lambda_m()))
 
 
-class implementation(terms_uh):
+class operators(terms_uh):
 
     def norm_x(self, M):
         return np.linalg.norm(M, self.l, axis=-1)
@@ -113,6 +113,13 @@ class implementation(terms_uh):
 
     def matrix_lamb_gamm_thet(self, M):
         return self.x - M
+
+
+class assembled_matrix(operators):
+    def grad_TPS(self, M, x):
+        comp_x = (M**(2*self.beta-1)) * x[0] * (2*self.beta*np.log(M+1e-20)+1)
+        comp_y = (M**(2*self.beta-1)) * x[1] * (2*self.beta*np.log(M+1e-20)+1)
+        return comp_x, comp_y
 
 
 class exact_solution(object):
@@ -186,7 +193,7 @@ M1 = np.array([
 ])
 
 # print(implementation(Mi, Mb, 2, 0.3).K1())
-#print(implementation(Mi, Mb, 2, 0.1, x).a_m())
+print(assembled_matrix(Mi, Mb, 2, 0.1, x).a_m().shape)
 # MQ1 = implementation(Mi, Mb, 2, 0.1).B()
 # A = implementation(Mi, Mb, 2, 0.1).A()
 # Ainv = np.linalg.inv(A)
@@ -207,10 +214,10 @@ M1 = np.array([
 
 #print(np.linalg.norm(x-Mb, axis=-1).reshape(-1, 1))
 #u1, u2 = exact_solution(A=Mi, t=0.2, nu=1.1).hopf_cole_transform()
-solution_domain = exact_solution(
-    A=Mi, radius=0.2, t=0.2, nu=1.01, c_x=0.6, c_y=0.7)
-Omega = solution_domain.domain()
-u, v = solution_domain.hopf_cole_transform()
+# solution_domain = exact_solution(
+#     A=Mi, radius=0.2, t=0.2, nu=1.01, c_x=0.6, c_y=0.7)
+# Omega = solution_domain.domain()
+# u, v = solution_domain.hopf_cole_transform()
 
 # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 # X, Y = Omega[:, 0], Omega[:, 1]
@@ -242,5 +249,3 @@ u, v = solution_domain.hopf_cole_transform()
 # #ax.set_zlim(-100, 100)
 
 # plt.show()
-
-print(u.shape)
