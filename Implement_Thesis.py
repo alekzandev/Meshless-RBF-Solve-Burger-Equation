@@ -1,4 +1,4 @@
-import numdifftools as nd
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.linalg import lu_factor, lu_solve
 
@@ -14,24 +14,26 @@ class Onestepmethod(object):
         self.N = N
         self.tol = tol
         self.m = len(y0)
-        self.s = len(b)
+        self.s = len(self.b)
 
     def step(self):
         ti, yi = self.grid[0], self.y0
-        tim1 = ti
+        t_i = ti
+        yi = yi[0]
         yield ti, yi
 
         for ti in self.grid[1:]:
-            yi += self.h*self.phi(tim1, yi)
-            tim1 = ti
+            yi = yi + self.h*self.phi(t_i, yi)
+            t_i = ti
+            yi = yi[0]
             yield ti, yi
 
     def solve(self):
-        self.solution = list(self.step())
+        self.solution = np.array(list(self.step()))
 
 
 class RungeKutta_implicit(Onestepmethod):
-    def phi(self, t0, y0):
+    def phi(self, ti, yi):
         '''
         Calculates the sum of b_j*Y_j in one step of the Runge-Kutta method with y_{n+1}= y_n + h*sum_{j=1}^s b_j *Y
         where j=1,2,...,s and s is the number of stages, b the notes and Y the stages values.
@@ -43,11 +45,14 @@ class RungeKutta_implicit(Onestepmethod):
 
         '''
         M = 10
-        stageDer = np.array(self.s*[self.f(t0, y0)])  # Initial value Y'_0
+        stageDer = np.array(self.s*[self.f(ti, yi)])  # Initial value Y'_0
         #J = nd.Jacobian(self.f)([t0, y0[0]])
-        J = nd.Jacobian(self.f, t0, y0)
-        stageVal = self.phi_solve(t0, y0, stageDer, J, M)
+        # J = nd.Jacobian(self.f, t0, y0)
 
+        #J = np.array([-5])
+        #J = np.array([[0, 1], [-1, 0]])
+        J = np.array([[0, 1], [-9.8*np.cos(yi[0]), 0]])
+        stageVal = self.phi_solve(ti, yi, stageDer, J, M)
         return np.array([np.dot(self.b, stageVal.reshape(self.s, self.m)[:, j]) for j in range(self.m)])
 
     def phi_solve(self, t0, y0, initVal, J, M):
@@ -96,22 +101,24 @@ class RungeKutta_implicit(Onestepmethod):
         t0 = 
         y0 =
         '''
+
         d = lu_solve(luFactor, -self.F(initVal.flatten(), t0, y0))
 
         return initVal.flatten() + d, np.linalg.norm(d)
 
-    def F(self, stageDer, t0, y0):
+    def F(self, stageDer, t_n, y_i):
         '''
         Returns the substraction Y'_i-
         '''
+
         stageDer_new = np.empty((self.s, self.m))
 
         for i in range(self.s):
 
-            stageVal = y0 + np.array([self.h * np.dot(
+            stageVal = y_i + np.array([self.h * np.dot(
                 self.A[i, :], stageDer.reshape(self.s, self.m)[:, j]) for j in range(self.m)])
 
-            stageDer_new[i, :] = self.f(t0 + self.c[i] * self.h, stageVal)
+            stageDer_new[i, :] = self.f(t_n + self.c[i] * self.h, stageVal)
 
         return stageDer - stageDer_new.reshape(-1)
 
@@ -121,8 +128,9 @@ class SDIRK(RungeKutta_implicit):
         '''
         This function solves F(Y_i)=0
         '''
+        alpha = self.A[0, 0]
 
-        JJ = np.eye(self.m) - self.h * self.A[0, 0] * j
+        JJ = np.eye(self.m) - self.h * alpha * J
         luFactor = lu_factor(JJ)
 
         for i in range(M):
@@ -142,10 +150,12 @@ class SDIRK(RungeKutta_implicit):
         '''
         x = []
         for i in range(self.s):
+            print(initVal)
             rhs = -self.F(initVal.flatten(), t0, y0)[i * self.m:(i+1) * self.m] + np.sum(
                 [self.h * self.A[i, j] * np.dot(J, x[j]) for j in range(i)], axis=0)
             d = lu_solve(luFactor, rhs)
             x.append(d)
+
         return initVal + x, np.linalg.norm(x)
 
 
@@ -155,7 +165,6 @@ class Gauss(RungeKutta_implicit):
         [5/36 + np.sqrt(15)/24, 2/9, 5/36 - np.sqrt(15)/24],
         [5/36 + np.sqrt(15)/30, 2/9 + np.sqrt(15)/15, 5/36]
     ])
-    global b
     b = np.array([5/18, 4/9, 5/18])
     c = np.array([1/2-np.sqrt(15)/10, 1/2, 1/2 + np.sqrt(15)/10])
 
@@ -179,15 +188,34 @@ class SDIRK_tableau5s(SDIRK):
     c = np.array([1/4, 3/4, 11/20, 1/2, 1])
 
 
-t0, te = 0, 0.1
+t0, te = 0, 1.
 tol_newton = 1e-9
 tol_sol = 1e-5
+N = 100
+
+# y0 = np.array([1])
+# def f(t, y): return -5*y
+# y0 = np.array([2, 3])
+# def f(t, y): return np.dot(np.array([[0, 1], [-1, 0]]), y)
+
+y0 = np.array([np.pi/2, 0])
+f = lambda t,y: np.array([y[1], -9.8*np.sin(y[0])])
+
+
 # N = [2*n for n in range(100)]
-scalar = Gauss(lambda t, y: -5*y,
-               np.array([1]), t0, te, 2, tol_newton)
+scalar = Gauss(f, y0, t0, te, N, tol_newton)
 
 scalar.solve()
+S = scalar.solution
 
+# t = S[:, 0]
+# y = S[:, 1]
+# a = np.exp((-5*t))
+# error = np.abs(y-a)
+
+# plt.plot(t, error)
+# # # plt.plot(t,a)
+# plt.show()
 # def test_scalar():
 #     t0, te = 0, 0.1
 #     tol_newton = 1e-9
