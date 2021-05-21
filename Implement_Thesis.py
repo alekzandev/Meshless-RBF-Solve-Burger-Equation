@@ -49,9 +49,9 @@ class RungeKutta_implicit(Onestepmethod):
         #J = nd.Jacobian(self.f)([t0, y0[0]])
         # J = nd.Jacobian(self.f, t0, y0)
 
-        #J = np.array([-5])
+        J = np.array([-5])
         #J = np.array([[0, 1], [-1, 0]])
-        J = np.array([[0, 1], [-9.8*np.cos(yi[0]), 0]])
+        #J = np.array([[0, 1], [-9.8*np.cos(yi[0]), 0]])
         stageVal = self.phi_solve(ti, yi, stageDer, J, M)
         return np.array([np.dot(self.b, stageVal.reshape(self.s, self.m)[:, j]) for j in range(self.m)])
 
@@ -193,13 +193,13 @@ tol_newton = 1e-9
 tol_sol = 1e-5
 N = 100
 
-# y0 = np.array([1])
-# def f(t, y): return -5*y
+y0 = np.array([1])
+def f(t, y): return -5*y
 # y0 = np.array([2, 3])
 # def f(t, y): return np.dot(np.array([[0, 1], [-1, 0]]), y)
 
-y0 = np.array([np.pi/2, 0])
-f = lambda t,y: np.array([y[1], -9.8*np.sin(y[0])])
+# y0 = np.array([np.pi/2, 0])
+# f = lambda t,y: np.array([y[1], -9.8*np.sin(y[0])])
 
 
 # N = [2*n for n in range(100)]
@@ -208,14 +208,14 @@ scalar = Gauss(f, y0, t0, te, N, tol_newton)
 scalar.solve()
 S = scalar.solution
 
-# t = S[:, 0]
-# y = S[:, 1]
-# a = np.exp((-5*t))
-# error = np.abs(y-a)
+t = S[:, 0]
+y = S[:, 1]
+a = np.exp((-5*t))
+error = np.abs(y-a)
 
-# plt.plot(t, error)
+plt.plot(t, error)
 # # # plt.plot(t,a)
-# plt.show()
+plt.show()
 # def test_scalar():
 #     t0, te = 0, 0.1
 #     tol_newton = 1e-9
