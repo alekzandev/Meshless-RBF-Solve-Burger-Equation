@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
 
-from halton_points import HaltonPoints
+from Halton_Points import HaltonPoints
 
 
 class terms_uh(object):
@@ -75,17 +75,19 @@ class terms_uh(object):
     def C(self):
         return np.linalg.inv(self.A()) + np.matmul(np.matmul(self.B().transpose(), self.Sinv()), self.B())
 
-    def lambda_m(self):
-        return self.RBF(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi))).reshape(-1, 1)
+    def lambda_m(self, phi_m):
+        # return self.RBF(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi))).reshape(-1, 1)
+        return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi))).reshape(-1, 1)
 
-    def gamma_m(self):
-        return self.RBF(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb))).reshape(-1, 1)
+    def gamma_m(self, phi_m):
+        return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb))).reshape(-1, 1)
+        # return self.RBF(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb))).reshape(-1, 1)
 
     def theta_m(self):
         return np.ones((self.dm, 1))
 
     def a_m(self):
-        return np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((self.gamma_m(), self.theta_m()))) - self.lambda_m())
+        return np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((self.gamma_m(self.RBF), self.theta_m()))) - self.lambda_m(self.RBF))
 
     def b_m(self):
         return np.matmul(self.C(), np.vstack((self.gamma_m(), self.theta_m()))) - np.matmul(self.B().transpose(), np.matmul(self.Sinv(), self.lambda_m()))
@@ -120,6 +122,9 @@ class assembled_matrix(operators):
         comp_x = (M**(2*self.beta-1)) * x[0] * (2*self.beta*np.log(M+1e-20)+1)
         comp_y = (M**(2*self.beta-1)) * x[1] * (2*self.beta*np.log(M+1e-20)+1)
         return comp_x, comp_y
+
+    def laplacian_TPS(self, M, x):
+        return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M)+1))
 
 
 class exact_solution(object):
@@ -159,7 +164,7 @@ class exact_solution(object):
 
 x_i = np.array([2, 3, 2]).reshape(-1, 1)
 y_i = np.array([1, 0, 3]).reshape(-1, 1)
-Mi = HaltonPoints(2, 700).haltonPoints()  # np.hstack((x_i, y_i))
+Mi = HaltonPoints(2, 10).haltonPoints()  # np.hstack((x_i, y_i))
 Mb = np.array([
     [0., 0.],
     [0., 0.5],
@@ -193,7 +198,9 @@ M1 = np.array([
 ])
 
 # print(implementation(Mi, Mb, 2, 0.3).K1())
-print(assembled_matrix(Mi, Mb, 2, 0.1, x).a_m().shape)
+amm = assembled_matrix(Mi, Mb, 2, 0.1, x).a_m()
+for i, row in enumerate(amm):
+    print(i+1, row)
 # MQ1 = implementation(Mi, Mb, 2, 0.1).B()
 # A = implementation(Mi, Mb, 2, 0.1).A()
 # Ainv = np.linalg.inv(A)
