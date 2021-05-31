@@ -3,10 +3,9 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+from halton_points import HaltonPoints
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
-
-from Halton_Points import HaltonPoints
 
 
 class terms_uh(object):
@@ -40,6 +39,7 @@ class terms_uh(object):
             return (-1/self.c**3) * (np.exp(-self.c * self.norm_x(M)) + self.c * self.norm_x(M))
 
     def K2(self):
+        print(2)
         return self.RBF(self.norm_x(self.matrix_K(self.Mb)))
 
     def poly_basis(self):
@@ -197,14 +197,14 @@ M1 = np.array([
     ]
 ])
 
-# print(implementation(Mi, Mb, 2, 0.3).K1())
 amm = assembled_matrix(Mi, Mb, 2, 0.1, x).a_m()
-for i, row in enumerate(amm):
-    print(i+1, row)
+# for i, row in enumerate(amm):
+#     print(i+1, row)
 # MQ1 = implementation(Mi, Mb, 2, 0.1).B()
 # A = implementation(Mi, Mb, 2, 0.1).A()
 # Ainv = np.linalg.inv(A)
 
+print(amm)
 # print(Mi.shape)
 # print(x)
 
