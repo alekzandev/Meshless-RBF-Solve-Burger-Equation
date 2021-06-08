@@ -3,9 +3,10 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-from halton_points import HaltonPoints
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
+
+from halton_points import HaltonPoints
 
 
 class terms_uh(object):
@@ -40,7 +41,6 @@ class terms_uh(object):
             return (-1/self.c**3) * (np.exp(-self.c * self.norm_x(M)) + self.c * self.norm_x(M))
 
     def K2(self):
-        print(2)
         return self.RBF(self.norm_x(self.matrix_K(self.Mb)))
 
     def poly_basis(self):
@@ -82,20 +82,29 @@ class terms_uh(object):
 
     def gamma_m(self, phi_m):
         self.op = "gamma"
-        # M = self.matrix_lamb_gamm_thet(self.Mb)
-        # M_norm = self.norm_x(M).reshape(-1,1)
-        # # print (" M={} \n M_norm={}".format(M.shape, M_norm.shape))
-        # print(M_norm)
-        # return phi_m(M_norm)
-        return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)).reshape(-1, 1))
+        if phi_m == self.laplacian_TPS:
+            # M = self.matrix_lamb_gamm_thet(self.Mb)
+            # M_norm = self.norm_x(M).reshape(-1,1)
+            # # print (" M={} \n M_norm={}".format(M.shape, M_norm.shape))
+            # print(M_norm)
+            # return phi_m(M_norm)
+            return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)).reshape(-1, 1))
+        elif phi_m == self.grad_TPS:
+            return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)))
 
     def theta_m(self):
         return np.ones((self.dm, 1))
 
     def a_m_op(self, lin_op):
-        print(self.gamma_m(lin_op))
-        print(lin_op == self.grad_TPS)
-        return np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((self.gamma_m(lin_op), self.theta_m()))) - self.lambda_m(lin_op))
+        if lin_op == self.laplacian_TPS:
+            return np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((self.gamma_m(lin_op), self.theta_m()))) - self.lambda_m(lin_op))
+        elif lin_op == self.grad_TPS:
+            gamma = self.gamma_m(lin_op)
+            print(gamma)
+            #print(np.vstack((gamma[:,0], self.theta_m())))
+            am_x = np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((gamma[:,0], self.theta_m()))) - self.lambda_m(lin_op))
+            am_y = np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((gamma[:,1], self.theta_m()))) - self.lambda_m(lin_op))
+            return np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((self.gamma_m(lin_op), self.theta_m()))) - self.lambda_m(lin_op))
 
     def a_m(self):
         return self.a_m_op(self.RBF)
@@ -116,15 +125,15 @@ class operators(terms_uh):
         return np.linalg.norm(M, self.l, axis=-1)
 
     def matrix_K(self, M):
-        n = M.shape[0]
-        my_matrix = list()
+        n=M.shape[0]
+        my_matrix=list()
         for j in M:
             for l in M:
                 my_matrix.append(j-l)
         return np.array(my_matrix).reshape(n, n, self.d)
 
     def matrix_M(self):
-        my_matrix = list()
+        my_matrix=list()
         for r_i in self.Mi:
             for r_b in self.Mb:
                 my_matrix.append(r_i-r_b)
@@ -134,47 +143,47 @@ class operators(terms_uh):
         return self.x - M
 
 
-# class assembled_matrix(operators):
-#     def grad_TPS(self, M):
-#         op = self.op
-#         if op == "lambda":
-#             comp_x = (M**(2*self.beta-1)) * \
-#                 self.matrix_lamb_gamm_thet(self.Mi)[:, 0].reshape(-1, 1) * \
-#                 (2*self.beta*np.log(M+1e-20)+1)
-#             comp_y = (M**(2*self.beta-1)) * \
-#                 self.matrix_lamb_gamm_thet(self.Mi)[:, 1].reshape(-1, 1) * \
-#                 (2*self.beta*np.log(M+1e-20)+1)
-#         elif op == "gamma":
-#             comp_x = M**(2*self.beta-1) * \
-#                 self.matrix_lamb_gamm_thet(self.Mb)[:, 0].reshape(-1, 1) * \
-#                 (2*self.beta*np.log(M+1e-20)+1)
-#             comp_y = (M**(2*self.beta-1)) * \
-#                 self.matrix_lamb_gamm_thet(self.Mb)[:, 1].reshape(-1, 1) * \
-#                 (2*self.beta*np.log(M+1e-20)+1)
-#         return comp_x, comp_y
+class assembled_matrix(operators):
+    def grad_TPS(self, M):
+        op=self.op
+        if op == "lambda":
+            comp_x=(M**(2*self.beta-1)).reshape(-1, 1) *\
+                self.matrix_lamb_gamm_thet(self.Mi)[:, 0].reshape(-1, 1) *\
+                (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
+            comp_y=(M**(2*self.beta-1)).reshape(-1, 1) *\
+                self.matrix_lamb_gamm_thet(self.Mi)[:, 1].reshape(-1, 1) *\
+                (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
+        elif op == "gamma":
+            comp_x=(M**(2*self.beta-1)).reshape(-1, 1) *\
+                self.matrix_lamb_gamm_thet(self.Mb)[:, 0].reshape(-1, 1) *\
+                (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
+            comp_y=(M**(2*self.beta-1)).reshape(-1, 1) *\
+                self.matrix_lamb_gamm_thet(self.Mb)[:, 1].reshape(-1, 1) *\
+                (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
+        return np.hstack((comp_x, comp_y))
 
-#     def laplacian_TPS(self, M):
-#         return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M)+1))
+    def laplacian_TPS(self, M):
+        return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M)+1))
 
-#     def F_m(self, init_val):
-#         return self.nu * self.lap_am().T
+    def F_m(self, init_val):
+        return self.nu * self.lap_am().T
 
 
 class exact_solution(object):
     def __init__(self, A=None, t=None, nu=None, radius=0.15, c_x=0.5, c_y=0.5):
-        self.A = A
-        self.x = A[:, 0]
-        self.y = A[:, 1]
-        self.t = t
-        self.nu = nu
-        self.radius = radius
-        self.c_x = c_x
-        self.c_y = c_y
+        self.A=A
+        self.x=A[:, 0]
+        self.y=A[:, 1]
+        self.t=t
+        self.nu=nu
+        self.radius=radius
+        self.c_x=c_x
+        self.c_y=c_y
 
     def domain(self):
-        dist_from_center = np.sqrt(
+        dist_from_center=np.sqrt(
             (self.x - self.c_x)**2 + (self.y - self.c_y)**2)
-        mask = dist_from_center < self.radius
+        mask=dist_from_center < self.radius
         # mask_x = np.logical_and(
         #     self.x > self.c_x - self.radius, self.x < self.c_x + self.radius)
         # A = self.A.copy()
@@ -184,21 +193,21 @@ class exact_solution(object):
         return self.A[mask]
 
     def hopf_cole_transform(self):
-        Omega = self.domain()
-        x, y = Omega[:, 0], Omega[:, 1]
+        Omega=self.domain()
+        x, y=Omega[:, 0], Omega[:, 1]
         # x, y = np.meshgrid(x, y)
-        u = 3/4 - 1/4 * \
+        u=3/4 - 1/4 * \
             (1 / (1 + np.exp((4*y - 4*x - self.t) / (32*self.nu))))
-        v = 3/4 + 1/4 * \
+        v=3/4 + 1/4 * \
             (1 / (1 + np.exp((4*y - 4*x - self.t) / (32*self.nu))))
 
         return u, v
 
 
-x_i = np.array([2, 3, 2]).reshape(-1, 1)
-y_i = np.array([1, 0, 3]).reshape(-1, 1)
-Mi = HaltonPoints(2, 10).haltonPoints()  # np.hstack((x_i, y_i))
-Mb = np.array([
+x_i=np.array([2, 3, 2]).reshape(-1, 1)
+y_i=np.array([1, 0, 3]).reshape(-1, 1)
+Mi=HaltonPoints(2, 10).haltonPoints()  # np.hstack((x_i, y_i))
+Mb=np.array([
     [0., 0.],
     [0., 0.5],
     [0., 1.],
@@ -208,9 +217,9 @@ Mb = np.array([
     [1., 0.],
     [0.5, 0.]
 ])
-x = np.array([1.1, 2.3])
+x=np.array([1.1, 2.3])
 
-M1 = np.array([
+M1=np.array([
     [
         [0, 0],
         [-1, -1],
@@ -231,20 +240,12 @@ M1 = np.array([
 ])
 
 # print(implementation(Mi, Mb, 2, 0.3).K1())
-init_val = np.array([0.4, -0.2])
+init_val=np.array([0.4, -0.2])
 
-#print(np.linalg.norm(x-Mb, axis=-1).reshape(-1,1))
-amm = assembled_matrix(Mi, Mb, 2, 0.1, x).grad_am()
+# print(np.linalg.norm(x-Mb, axis=-1).reshape(-1,1))
+amm=assembled_matrix(Mi, Mb, 2, 0.1, x).grad_am()
 print(amm)
 
-amm = assembled_matrix(Mi, Mb, 2, 0.1, x).a_m()
-# for i, row in enumerate(amm):
-#     print(i+1, row)
-# MQ1 = implementation(Mi, Mb, 2, 0.1).B()
-# A = implementation(Mi, Mb, 2, 0.1).A()
-# Ainv = np.linalg.inv(A)
-
-print(amm)
 # print(Mi.shape)
 # print(x)
 
@@ -252,15 +253,15 @@ print(amm)
 # f =implementation(Mi, Mb, 2, 0.1, x)
 # print(Mb)
 # M = f.RBF(Mb)
-#print(np.linalg.norm(M, 2, axis=-1))
+# print(np.linalg.norm(M, 2, axis=-1))
 
 # M2 = np.linalg.norm(Mb, 2, axis = -1)
 # print(M2)
 # M2 = f.RBF(M2)
 
 
-#print(np.linalg.norm(x-Mb, axis=-1).reshape(-1, 1))
-#u1, u2 = exact_solution(A=Mi, t=0.2, nu=1.1).hopf_cole_transform()
+# print(np.linalg.norm(x-Mb, axis=-1).reshape(-1, 1))
+# u1, u2 = exact_solution(A=Mi, t=0.2, nu=1.1).hopf_cole_transform()
 # solution_domain = exact_solution(
 #     A=Mi, radius=0.2, t=0.2, nu=1.01, c_x=0.6, c_y=0.7)
 # Omega = solution_domain.domain()
