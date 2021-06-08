@@ -3,10 +3,9 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+from halton_points import HaltonPoints
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
-
-from Halton_Points import HaltonPoints
 
 
 class terms_uh(object):
@@ -41,6 +40,7 @@ class terms_uh(object):
             return (-1/self.c**3) * (np.exp(-self.c * self.norm_x(M)) + self.c * self.norm_x(M))
 
     def K2(self):
+        print(2)
         return self.RBF(self.norm_x(self.matrix_K(self.Mb)))
 
     def poly_basis(self):
@@ -134,30 +134,30 @@ class operators(terms_uh):
         return self.x - M
 
 
-class assembled_matrix(operators):
-    def grad_TPS(self, M):
-        op = self.op
-        if op == "lambda":
-            comp_x = (M**(2*self.beta-1)) * \
-                self.matrix_lamb_gamm_thet(self.Mi)[:, 0].reshape(-1, 1) * \
-                (2*self.beta*np.log(M+1e-20)+1)
-            comp_y = (M**(2*self.beta-1)) * \
-                self.matrix_lamb_gamm_thet(self.Mi)[:, 1].reshape(-1, 1) * \
-                (2*self.beta*np.log(M+1e-20)+1)
-        elif op == "gamma":
-            comp_x = M**(2*self.beta-1) * \
-                self.matrix_lamb_gamm_thet(self.Mb)[:, 0].reshape(-1, 1) * \
-                (2*self.beta*np.log(M+1e-20)+1)
-            comp_y = (M**(2*self.beta-1)) * \
-                self.matrix_lamb_gamm_thet(self.Mb)[:, 1].reshape(-1, 1) * \
-                (2*self.beta*np.log(M+1e-20)+1)
-        return comp_x, comp_y
+# class assembled_matrix(operators):
+#     def grad_TPS(self, M):
+#         op = self.op
+#         if op == "lambda":
+#             comp_x = (M**(2*self.beta-1)) * \
+#                 self.matrix_lamb_gamm_thet(self.Mi)[:, 0].reshape(-1, 1) * \
+#                 (2*self.beta*np.log(M+1e-20)+1)
+#             comp_y = (M**(2*self.beta-1)) * \
+#                 self.matrix_lamb_gamm_thet(self.Mi)[:, 1].reshape(-1, 1) * \
+#                 (2*self.beta*np.log(M+1e-20)+1)
+#         elif op == "gamma":
+#             comp_x = M**(2*self.beta-1) * \
+#                 self.matrix_lamb_gamm_thet(self.Mb)[:, 0].reshape(-1, 1) * \
+#                 (2*self.beta*np.log(M+1e-20)+1)
+#             comp_y = (M**(2*self.beta-1)) * \
+#                 self.matrix_lamb_gamm_thet(self.Mb)[:, 1].reshape(-1, 1) * \
+#                 (2*self.beta*np.log(M+1e-20)+1)
+#         return comp_x, comp_y
 
-    def laplacian_TPS(self, M):
-        return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M)+1))
+#     def laplacian_TPS(self, M):
+#         return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M)+1))
 
-    def F_m(self, init_val):
-        return self.nu * self.lap_am().T
+#     def F_m(self, init_val):
+#         return self.nu * self.lap_am().T
 
 
 class exact_solution(object):
@@ -237,12 +237,14 @@ init_val = np.array([0.4, -0.2])
 amm = assembled_matrix(Mi, Mb, 2, 0.1, x).grad_am()
 print(amm)
 
+amm = assembled_matrix(Mi, Mb, 2, 0.1, x).a_m()
 # for i, row in enumerate(amm):
 #     print(i+1, row)
 # MQ1 = implementation(Mi, Mb, 2, 0.1).B()
 # A = implementation(Mi, Mb, 2, 0.1).A()
 # Ainv = np.linalg.inv(A)
 
+print(amm)
 # print(Mi.shape)
 # print(x)
 
