@@ -16,7 +16,7 @@ class terms_uh(object):
     l: norm order (1,2,np.inf)
     '''
 
-    def __init__(self, Mi, Mb, beta, c, x, poly_b=np.array([1]),  rbf='TPS', l=2):
+    def __init__(self, Mi, Mb, beta, c, x, nu=1, poly_b=np.array([1]),  rbf='TPS', l=2):
         self.Mi = Mi
         self.ni = Mi.shape[0]
         self.Mb = Mb
@@ -26,6 +26,7 @@ class terms_uh(object):
         self.beta = beta
         self.c = c
         self.x = x
+        self.nu = nu
         self.rbf = rbf
         self.l = l
 
@@ -76,18 +77,34 @@ class terms_uh(object):
         return np.linalg.inv(self.A()) + np.matmul(np.matmul(self.B().transpose(), self.Sinv()), self.B())
 
     def lambda_m(self, phi_m):
-        # return self.RBF(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi))).reshape(-1, 1)
+        self.op = "lambda"
         return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi))).reshape(-1, 1)
 
     def gamma_m(self, phi_m):
-        return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb))).reshape(-1, 1)
-        # return self.RBF(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb))).reshape(-1, 1)
+        self.op = "gamma"
+        # M = self.matrix_lamb_gamm_thet(self.Mb)
+        # M_norm = self.norm_x(M).reshape(-1,1)
+        # # print (" M={} \n M_norm={}".format(M.shape, M_norm.shape))
+        # print(M_norm)
+        # return phi_m(M_norm)
+        return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)).reshape(-1, 1))
 
     def theta_m(self):
         return np.ones((self.dm, 1))
 
+    def a_m_op(self, lin_op):
+        print(self.gamma_m(lin_op))
+        print(lin_op == self.grad_TPS)
+        return np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((self.gamma_m(lin_op), self.theta_m()))) - self.lambda_m(lin_op))
+
     def a_m(self):
-        return np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((self.gamma_m(self.RBF), self.theta_m()))) - self.lambda_m(self.RBF))
+        return self.a_m_op(self.RBF)
+
+    def lap_am(self):
+        return self.a_m_op(self.laplacian_TPS)
+
+    def grad_am(self):
+        return self.a_m_op(self.grad_TPS)
 
     def b_m(self):
         return np.matmul(self.C(), np.vstack((self.gamma_m(), self.theta_m()))) - np.matmul(self.B().transpose(), np.matmul(self.Sinv(), self.lambda_m()))
@@ -118,13 +135,29 @@ class operators(terms_uh):
 
 
 class assembled_matrix(operators):
-    def grad_TPS(self, M, x):
-        comp_x = (M**(2*self.beta-1)) * x[0] * (2*self.beta*np.log(M+1e-20)+1)
-        comp_y = (M**(2*self.beta-1)) * x[1] * (2*self.beta*np.log(M+1e-20)+1)
+    def grad_TPS(self, M):
+        op = self.op
+        if op == "lambda":
+            comp_x = (M**(2*self.beta-1)) * \
+                self.matrix_lamb_gamm_thet(self.Mi)[:, 0].reshape(-1, 1) * \
+                (2*self.beta*np.log(M+1e-20)+1)
+            comp_y = (M**(2*self.beta-1)) * \
+                self.matrix_lamb_gamm_thet(self.Mi)[:, 1].reshape(-1, 1) * \
+                (2*self.beta*np.log(M+1e-20)+1)
+        elif op == "gamma":
+            comp_x = M**(2*self.beta-1) * \
+                self.matrix_lamb_gamm_thet(self.Mb)[:, 0].reshape(-1, 1) * \
+                (2*self.beta*np.log(M+1e-20)+1)
+            comp_y = (M**(2*self.beta-1)) * \
+                self.matrix_lamb_gamm_thet(self.Mb)[:, 1].reshape(-1, 1) * \
+                (2*self.beta*np.log(M+1e-20)+1)
         return comp_x, comp_y
 
-    def laplacian_TPS(self, M, x):
+    def laplacian_TPS(self, M):
         return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M)+1))
+
+    def F_m(self, init_val):
+        return self.nu * self.lap_am().T
 
 
 class exact_solution(object):
@@ -198,9 +231,14 @@ M1 = np.array([
 ])
 
 # print(implementation(Mi, Mb, 2, 0.3).K1())
-amm = assembled_matrix(Mi, Mb, 2, 0.1, x).a_m()
-for i, row in enumerate(amm):
-    print(i+1, row)
+init_val = np.array([0.4, -0.2])
+
+#print(np.linalg.norm(x-Mb, axis=-1).reshape(-1,1))
+amm = assembled_matrix(Mi, Mb, 2, 0.1, x).grad_am()
+print(amm)
+
+# for i, row in enumerate(amm):
+#     print(i+1, row)
 # MQ1 = implementation(Mi, Mb, 2, 0.1).B()
 # A = implementation(Mi, Mb, 2, 0.1).A()
 # Ainv = np.linalg.inv(A)
