@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
 
-from halton_points import HaltonPoints
+from Halton_Points import HaltonPoints
 
 
 class terms_uh(object):
@@ -100,10 +100,9 @@ class terms_uh(object):
             return np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((self.gamma_m(lin_op), self.theta_m()))) - self.lambda_m(lin_op))
         elif lin_op == self.grad_TPS:
             gamma = self.gamma_m(lin_op)
-            print(gamma)
-            #print(np.vstack((gamma[:,0], self.theta_m())))
-            am_x = np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((gamma[:,0], self.theta_m()))) - self.lambda_m(lin_op))
-            am_y = np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((gamma[:,1], self.theta_m()))) - self.lambda_m(lin_op))
+            print(self.lambda_m(lin_op))
+            am_x = np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((gamma[:,0].reshape(-1,1), self.theta_m()))) - self.lambda_m(lin_op))
+            am_y = np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((gamma[:,1].reshape(-1,1), self.theta_m()))) - self.lambda_m(lin_op))
             return np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((self.gamma_m(lin_op), self.theta_m()))) - self.lambda_m(lin_op))
 
     def a_m(self):
