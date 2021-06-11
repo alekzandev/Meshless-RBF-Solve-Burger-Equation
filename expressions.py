@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
 
-from Halton_Points import HaltonPoints
+from halton_points import HaltonPoints
 
 
 class terms_uh(object):
