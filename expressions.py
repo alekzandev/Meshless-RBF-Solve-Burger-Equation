@@ -22,6 +22,7 @@ class terms_uh(object):
         self.Mb = Mb
         self.nb = Mb.shape[0]
         self.d = Mi.shape[1]
+        self.poly_b = poly_b
         self.dm = poly_b.shape[0]
         self.beta = beta
         self.c = c
@@ -43,14 +44,18 @@ class terms_uh(object):
     def K2(self):
         return self.RBF(self.norm_x(self.matrix_K(self.Mb)))
 
-    def poly_basis(self):
-        return 1  # np.array([1])
+    def poly_basis(self, M, i):
+        return M[:, 0].reshape(-1, 1) * self.poly_b[i, 0] + M[:, 1].reshape(-1, 1) * self.poly_b[i, 1] + self.poly_b[i, 2]
 
     def O2(self):
         return np.zeros((self.dm, self.dm))
 
     def Q2(self):
-        return np.ones((self.nb, self.dm)).reshape(-1, 1)
+        col1 = self.poly_basis(self.Mb, 0)
+        col2 = self.poly_basis(self.Mb, 1)
+        col3 = self.poly_basis(self.Mb, 2)
+        # return np.ones((self.nb, self.dm))  # .reshape(-1, 1)
+        return np.hstack((col1, col2, col3))
 
     def A(self):
         A1 = np.hstack((self.K2(), self.Q2()))
@@ -64,7 +69,11 @@ class terms_uh(object):
         return self.RBF(self.norm_x(self.matrix_M()))
 
     def Q1(self):
-        return np.ones((self.ni, self.dm))
+        col1 = self.poly_basis(self.Mi, 0)
+        col2 = self.poly_basis(self.Mi, 1)
+        col3 = self.poly_basis(self.Mi, 2)
+        # return np.ones((self.ni, self.dm))
+        return np.hstack((col1, col2, col3))
 
     def B(self):
         return np.matmul(np.hstack((self.M(), self.Q1())), np.linalg.inv(self.A()))
@@ -93,7 +102,14 @@ class terms_uh(object):
             return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)))
 
     def theta_m(self):
-        return np.ones((self.dm, 1))
+        row1 = self.x[0] * self.poly_b[0, 0] + x[1] * \
+            self.poly_b[0, 1] + self.poly_b[0, 2]
+        row2 = self.x[0] * self.poly_b[1, 0] + x[1] * \
+            self.poly_b[1, 1] + self.poly_b[1, 2]
+        row3 = self.x[0] * self.poly_b[2, 0] + x[1] * \
+            self.poly_b[2, 1] + self.poly_b[2, 2]
+        return np.vstack((row1, row2, row3))
+        # return np.ones((self.dm, 1))
 
     def a_m_op(self, lin_op):
         if lin_op == self.laplacian_TPS:
@@ -101,8 +117,10 @@ class terms_uh(object):
         elif lin_op == self.grad_TPS:
             gamma = self.gamma_m(lin_op)
             print(self.lambda_m(lin_op))
-            am_x = np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((gamma[:,0].reshape(-1,1), self.theta_m()))) - self.lambda_m(lin_op))
-            am_y = np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((gamma[:,1].reshape(-1,1), self.theta_m()))) - self.lambda_m(lin_op))
+            am_x = np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack(
+                (gamma[:, 0].reshape(-1, 1), self.theta_m()))) - self.lambda_m(lin_op))
+            am_y = np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack(
+                (gamma[:, 1].reshape(-1, 1), self.theta_m()))) - self.lambda_m(lin_op))
             return np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((self.gamma_m(lin_op), self.theta_m()))) - self.lambda_m(lin_op))
 
     def a_m(self):
@@ -124,15 +142,15 @@ class operators(terms_uh):
         return np.linalg.norm(M, self.l, axis=-1)
 
     def matrix_K(self, M):
-        n=M.shape[0]
-        my_matrix=list()
+        n = M.shape[0]
+        my_matrix = list()
         for j in M:
             for l in M:
                 my_matrix.append(j-l)
         return np.array(my_matrix).reshape(n, n, self.d)
 
     def matrix_M(self):
-        my_matrix=list()
+        my_matrix = list()
         for r_i in self.Mi:
             for r_b in self.Mb:
                 my_matrix.append(r_i-r_b)
@@ -144,19 +162,19 @@ class operators(terms_uh):
 
 class assembled_matrix(operators):
     def grad_TPS(self, M):
-        op=self.op
+        op = self.op
         if op == "lambda":
-            comp_x=(M**(2*self.beta-1)).reshape(-1, 1) *\
+            comp_x = (M**(2*self.beta-1)).reshape(-1, 1) *\
                 self.matrix_lamb_gamm_thet(self.Mi)[:, 0].reshape(-1, 1) *\
                 (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
-            comp_y=(M**(2*self.beta-1)).reshape(-1, 1) *\
+            comp_y = (M**(2*self.beta-1)).reshape(-1, 1) *\
                 self.matrix_lamb_gamm_thet(self.Mi)[:, 1].reshape(-1, 1) *\
                 (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
         elif op == "gamma":
-            comp_x=(M**(2*self.beta-1)).reshape(-1, 1) *\
+            comp_x = (M**(2*self.beta-1)).reshape(-1, 1) *\
                 self.matrix_lamb_gamm_thet(self.Mb)[:, 0].reshape(-1, 1) *\
                 (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
-            comp_y=(M**(2*self.beta-1)).reshape(-1, 1) *\
+            comp_y = (M**(2*self.beta-1)).reshape(-1, 1) *\
                 self.matrix_lamb_gamm_thet(self.Mb)[:, 1].reshape(-1, 1) *\
                 (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
         return np.hstack((comp_x, comp_y))
@@ -170,19 +188,19 @@ class assembled_matrix(operators):
 
 class exact_solution(object):
     def __init__(self, A=None, t=None, nu=None, radius=0.15, c_x=0.5, c_y=0.5):
-        self.A=A
-        self.x=A[:, 0]
-        self.y=A[:, 1]
-        self.t=t
-        self.nu=nu
-        self.radius=radius
-        self.c_x=c_x
-        self.c_y=c_y
+        self.A = A
+        self.x = A[:, 0]
+        self.y = A[:, 1]
+        self.t = t
+        self.nu = nu
+        self.radius = radius
+        self.c_x = c_x
+        self.c_y = c_y
 
     def domain(self):
-        dist_from_center=np.sqrt(
+        dist_from_center = np.sqrt(
             (self.x - self.c_x)**2 + (self.y - self.c_y)**2)
-        mask=dist_from_center < self.radius
+        mask = dist_from_center < self.radius
         # mask_x = np.logical_and(
         #     self.x > self.c_x - self.radius, self.x < self.c_x + self.radius)
         # A = self.A.copy()
@@ -192,21 +210,21 @@ class exact_solution(object):
         return self.A[mask]
 
     def hopf_cole_transform(self):
-        Omega=self.domain()
-        x, y=Omega[:, 0], Omega[:, 1]
+        Omega = self.domain()
+        x, y = Omega[:, 0], Omega[:, 1]
         # x, y = np.meshgrid(x, y)
-        u=3/4 - 1/4 * \
+        u = 3/4 - 1/4 * \
             (1 / (1 + np.exp((4*y - 4*x - self.t) / (32*self.nu))))
-        v=3/4 + 1/4 * \
+        v = 3/4 + 1/4 * \
             (1 / (1 + np.exp((4*y - 4*x - self.t) / (32*self.nu))))
 
         return u, v
 
 
-x_i=np.array([2, 3, 2]).reshape(-1, 1)
-y_i=np.array([1, 0, 3]).reshape(-1, 1)
-Mi=HaltonPoints(2, 10).haltonPoints()  # np.hstack((x_i, y_i))
-Mb=np.array([
+x_i = np.array([2, 3, 2]).reshape(-1, 1)
+y_i = np.array([1, 0, 3]).reshape(-1, 1)
+Mi = HaltonPoints(2, 10).haltonPoints()  # np.hstack((x_i, y_i))
+Mb = np.array([
     [0., 0.],
     [0., 0.5],
     [0., 1.],
@@ -216,9 +234,9 @@ Mb=np.array([
     [1., 0.],
     [0.5, 0.]
 ])
-x=np.array([1.1, 2.3])
+x = np.array([1.1, 2.3])
 
-M1=np.array([
+M1 = np.array([
     [
         [0, 0],
         [-1, -1],
@@ -238,12 +256,19 @@ M1=np.array([
     ]
 ])
 
+poly_b = np.array([[-1, -1, 1], [1/2, 3/2, -1], [3/2, 1/8, -3/8]])
+xxx = Mb[:, 0].reshape(-1, 1) * poly_b[0, 0] + \
+    Mb[:, 1].reshape(-1, 1) * poly_b[0, 1] + poly_b[0, 2]
+# print(xxx)
 # print(implementation(Mi, Mb, 2, 0.3).K1())
-init_val=np.array([0.4, -0.2])
+#init_val = np.array([0.4, -0.2])
 
+aa = assembled_matrix(Mi, Mb, 1, 0.1, x, poly_b=poly_b)
+print(aa.lap_am())
+# print(poly_b[1,1])
 # print(np.linalg.norm(x-Mb, axis=-1).reshape(-1,1))
-amm=assembled_matrix(Mi, Mb, 2, 0.1, x).grad_am()
-print(amm)
+# amm = assembled_matrix(Mi, Mb, 2, 0.1, x).grad_am()
+# print(amm)
 
 # print(Mi.shape)
 # print(x)
