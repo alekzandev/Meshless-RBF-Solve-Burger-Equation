@@ -87,11 +87,14 @@ class terms_uh(object):
 
     def lambda_m(self, phi_m):
         self.op = "lambda"
-        return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi))).reshape(-1, 1)
+        if phi_m == self.laplacian_TPS or phi_m == self.RBF:
+            return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi))).reshape(-1, 1)
+        elif phi_m == self.grad_TPS:
+            return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi)))
 
     def gamma_m(self, phi_m):
         self.op = "gamma"
-        if phi_m == self.laplacian_TPS:
+        if phi_m == self.laplacian_TPS or phi_m == self.RBF:
             # M = self.matrix_lamb_gamm_thet(self.Mb)
             # M_norm = self.norm_x(M).reshape(-1,1)
             # # print (" M={} \n M_norm={}".format(M.shape, M_norm.shape))
@@ -112,17 +115,17 @@ class terms_uh(object):
         # return np.ones((self.dm, 1))
 
     def a_m_op(self, lin_op):
-        if lin_op == self.laplacian_TPS:
+        if lin_op == self.laplacian_TPS or lin_op == self.RBF:
             return np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((self.gamma_m(lin_op), self.theta_m()))) - self.lambda_m(lin_op))
         elif lin_op == self.grad_TPS:
-            gamma = self.gamma_m(lin_op)
-            print(self.lambda_m(lin_op))
-            am_x = np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack(
-                (gamma[:, 0].reshape(-1, 1), self.theta_m()))) - self.lambda_m(lin_op))
-            am_y = np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack(
-                (gamma[:, 1].reshape(-1, 1), self.theta_m()))) - self.lambda_m(lin_op))
-            return np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((self.gamma_m(lin_op), self.theta_m()))) - self.lambda_m(lin_op))
-
+            return np.matmul(
+                self.Sinv(),
+                np.matmul(
+                    self.B(),
+                    np.vstack((self.gamma_m(lin_op), self.poly_b[:, 0:2]))
+                ) - self.lambda_m(lin_op)
+            )
+            
     def a_m(self):
         return self.a_m_op(self.RBF)
 
@@ -182,8 +185,10 @@ class assembled_matrix(operators):
     def laplacian_TPS(self, M):
         return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M)+1))
 
-    def F_m(self, init_val):
-        return self.nu * self.lap_am().T
+    def F_m(self):
+        np.random.seed(9936)
+        init_val=np.random.random((self.ni, self.d))
+        return np.matmul(self.nu * self.lap_am().T - np.matmul(self.a_m().T, np.matmul(init_val, self.grad_am().T)), init_val)
 
 
 class exact_solution(object):
@@ -223,7 +228,7 @@ class exact_solution(object):
 
 x_i = np.array([2, 3, 2]).reshape(-1, 1)
 y_i = np.array([1, 0, 3]).reshape(-1, 1)
-Mi = HaltonPoints(2, 10).haltonPoints()  # np.hstack((x_i, y_i))
+Mi = HaltonPoints(2, 256).haltonPoints()  # np.hstack((x_i, y_i))
 Mb = np.array([
     [0., 0.],
     [0., 0.5],
@@ -264,7 +269,7 @@ xxx = Mb[:, 0].reshape(-1, 1) * poly_b[0, 0] + \
 #init_val = np.array([0.4, -0.2])
 
 aa = assembled_matrix(Mi, Mb, 1, 0.1, x, poly_b=poly_b)
-print(aa.lap_am())
+print(aa.F_m())
 # print(poly_b[1,1])
 # print(np.linalg.norm(x-Mb, axis=-1).reshape(-1,1))
 # amm = assembled_matrix(Mi, Mb, 2, 0.1, x).grad_am()
