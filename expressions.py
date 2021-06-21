@@ -125,7 +125,7 @@ class terms_uh(object):
                     np.vstack((self.gamma_m(lin_op), self.poly_b[:, 0:2]))
                 ) - self.lambda_m(lin_op)
             )
-            
+
     def a_m(self):
         return self.a_m_op(self.RBF)
 
@@ -185,9 +185,12 @@ class assembled_matrix(operators):
     def laplacian_TPS(self, M):
         return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M)+1))
 
+    def u_0(self):
+        return np.sin(self.Mi[:, 0] + self.Mi[:, 1]).reshape(-1,1)
+
     def F_m(self):
         np.random.seed(9936)
-        init_val=np.random.random((self.ni, self.d))
+        init_val = np.random.random((self.ni, self.d))
         return np.matmul(self.nu * self.lap_am().T - np.matmul(self.a_m().T, np.matmul(init_val, self.grad_am().T)), init_val)
 
 
@@ -228,7 +231,7 @@ class exact_solution(object):
 
 x_i = np.array([2, 3, 2]).reshape(-1, 1)
 y_i = np.array([1, 0, 3]).reshape(-1, 1)
-Mi = HaltonPoints(2, 256).haltonPoints()  # np.hstack((x_i, y_i))
+Mi = HaltonPoints(2, 10).haltonPoints()  # np.hstack((x_i, y_i))
 Mb = np.array([
     [0., 0.],
     [0., 0.5],
@@ -266,10 +269,10 @@ xxx = Mb[:, 0].reshape(-1, 1) * poly_b[0, 0] + \
     Mb[:, 1].reshape(-1, 1) * poly_b[0, 1] + poly_b[0, 2]
 # print(xxx)
 # print(implementation(Mi, Mb, 2, 0.3).K1())
-#init_val = np.array([0.4, -0.2])
+# init_val = np.array([0.4, -0.2])
 
 aa = assembled_matrix(Mi, Mb, 1, 0.1, x, poly_b=poly_b)
-print(aa.F_m())
+print(aa.u_0())
 # print(poly_b[1,1])
 # print(np.linalg.norm(x-Mb, axis=-1).reshape(-1,1))
 # amm = assembled_matrix(Mi, Mb, 2, 0.1, x).grad_am()
