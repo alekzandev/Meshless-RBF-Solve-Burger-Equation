@@ -19,15 +19,18 @@ class Onestepmethod(object):
         self.s = len(self.b)
 
     def step(self):
+        print('step')
         ti, yi = self.grid[0], self.y0
         t_i = ti
         yi = yi[0]
         yield ti, yi
-
+        contador = 1
         for ti in self.grid[1:]:
+            print('cont:', contador)
             yi = yi + self.h*self.phi(t_i, yi)
             t_i = ti
             yi = yi[0]
+            contador += 1
             yield ti, yi
 
     def solve(self):
@@ -46,6 +49,7 @@ class RungeKutta_implicit(Onestepmethod):
         y0 = 1xm vector, the last solution y_n. Where m is the lenght of the IC y_0 of IVP.
 
         '''
+        print('phi')
         M = 10
         stageDer = np.array(self.s*[self.f(ti, yi)])  # Initial value Y'_0
         #J = nd.Jacobian(self.f)([t0, y0[0]])
@@ -56,7 +60,7 @@ class RungeKutta_implicit(Onestepmethod):
         #J = np.array([[0, 1], [-9.8*np.cos(yi[0]), 0]])
         stageVal = self.phi_solve(ti, yi, stageDer, J, M)
         return np.dot(self.b, stageVal.reshape(self.s, self.dm))
-        #-|-return np.array([np.dot(self.b, stageVal.reshape(self.s, self.dm)[:, j]) for j in range(self.dm)])
+        # -|-return np.array([np.dot(self.b, stageVal.reshape(self.s, self.dm)[:, j]) for j in range(self.dm)])
 
     def phi_solve(self, t0, y0, initVal, J, M):
         '''
@@ -113,14 +117,15 @@ class RungeKutta_implicit(Onestepmethod):
         '''
         Returns the substraction Y'_i-
         '''
-
+        print('F')
         stageDer_new = np.empty((self.s, self.dm))
+        # print(stageDer.shape)
 
         for i in range(self.s):
 
             stageVal = y_i + self.h * np.dot(
                 self.A[i, :], stageDer.reshape(self.s, self.dm))
-            #-|-stageVal = y_i + np.array([self.h * np.dot(
+            # -|-stageVal = y_i + np.array([self.h * np.dot(
             #     self.A[i, :], stageDer.reshape(self.s, self.dm)[:, j]) for j in range(self.dm)])
 
             stageDer_new[i, :] = self.f(t_n + self.c[i] * self.h, stageVal)
@@ -133,9 +138,11 @@ class SDIRK(RungeKutta_implicit):
         '''
         This function solves F(Y_i)=0
         '''
+        print('phi_solve')
         alpha = self.A[0, 0]
 
         JJ = np.eye(self.dm) - self.h * alpha * J
+
         luFactor = lu_factor(JJ)
 
         for i in range(M):
@@ -153,9 +160,9 @@ class SDIRK(RungeKutta_implicit):
         '''
         Takes on Newton step by solving
         '''
+        print('phi_newtonstep')
         x = []
         for i in range(self.s):
-            print(initVal)
             rhs = -self.F(initVal.flatten(), t0, y0)[i * self.dm:(i+1) * self.dm] + np.sum(
                 [self.h * self.A[i, j] * np.dot(J, x[j]) for j in range(i)], axis=0)
             d = lu_solve(luFactor, rhs)
@@ -209,6 +216,7 @@ def f(t, y): return -5*y
 
 # N = [2*n for n in range(100)]
 scalar = Gauss(f, y0, t0, te, N, tol_newton)
+#scalar = SDIRK_tableau2s(f, y0, t0, te, N, tol_newton)
 
 scalar.solve()
 S = scalar.solution

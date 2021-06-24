@@ -3,7 +3,7 @@ from expressions import *
 from halton_points import HaltonPoints
 
 
-class f(object):
+class interpolate(object):
     def __init__(self, n, dm=2):
         self.n = n
         self.Mi = HaltonPoints(dm, self.n).haltonPoints()
@@ -23,9 +23,8 @@ class f(object):
         for x in self.Mi:
             assem_matrix = assembled_matrix(self.Mi, self.Mb, 1, 0.1, x, poly_b=self.poly_b)
             X0 = assem_matrix.X_0()
-            #print(assem_matrix.F_m(X0))
             yield assem_matrix.F_m(X0)[0]
 
-aa = f(n=50)
+aa = interpolate(n=10)
 mlist = tuple(aa.F())
 print(np.vstack(mlist))
