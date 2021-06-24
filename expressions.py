@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
 
-from halton_points import HaltonPoints
+#from halton_points import HaltonPoints
 
 
 class terms_uh(object):
@@ -105,11 +105,11 @@ class terms_uh(object):
             return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)))
 
     def theta_m(self):
-        row1 = self.x[0] * self.poly_b[0, 0] + x[1] * \
+        row1 = self.x[0] * self.poly_b[0, 0] + self.x[1] * \
             self.poly_b[0, 1] + self.poly_b[0, 2]
-        row2 = self.x[0] * self.poly_b[1, 0] + x[1] * \
+        row2 = self.x[0] * self.poly_b[1, 0] + self.x[1] * \
             self.poly_b[1, 1] + self.poly_b[1, 2]
-        row3 = self.x[0] * self.poly_b[2, 0] + x[1] * \
+        row3 = self.x[0] * self.poly_b[2, 0] + self.x[1] * \
             self.poly_b[2, 1] + self.poly_b[2, 2]
         return np.vstack((row1, row2, row3))
         # return np.ones((self.dm, 1))
@@ -227,105 +227,3 @@ class exact_solution(object):
             (1 / (1 + np.exp((4*y - 4*x - self.t) / (32*self.nu))))
 
         return u, v
-
-
-x_i = np.array([2, 3, 2]).reshape(-1, 1)
-y_i = np.array([1, 0, 3]).reshape(-1, 1)
-Mi = HaltonPoints(2, 10).haltonPoints()  # np.hstack((x_i, y_i))
-Mb = np.array([
-    [0., 0.],
-    [0., 0.5],
-    [0., 1.],
-    [0.5, 1.],
-    [1., 1.],
-    [1., 0.5],
-    [1., 0.],
-    [0.5, 0.]
-])
-x = np.array([1.1, 2.3])
-
-M1 = np.array([
-    [
-        [0, 0],
-        [-1, -1],
-        [0, -2]
-    ],
-
-    [
-        [1, -1],
-        [0, 0],
-        [1, -3]
-    ],
-
-    [
-        [0, 2],
-        [-1, -3],
-        [0, 0]
-    ]
-])
-
-poly_b = np.array([[-1, -1, 1], [1/2, 3/2, -1], [3/2, 1/8, -3/8]])
-xxx = Mb[:, 0].reshape(-1, 1) * poly_b[0, 0] + \
-    Mb[:, 1].reshape(-1, 1) * poly_b[0, 1] + poly_b[0, 2]
-# print(xxx)
-# print(implementation(Mi, Mb, 2, 0.3).K1())
-# init_val = np.array([0.4, -0.2])
-
-aa = assembled_matrix(Mi, Mb, 1, 0.1, x, poly_b=poly_b)
-print(aa.F_m())
-# print(poly_b[1,1])
-# print(np.linalg.norm(x-Mb, axis=-1).reshape(-1,1))
-# amm = assembled_matrix(Mi, Mb, 2, 0.1, x).grad_am()
-# print(amm)
-
-# print(Mi.shape)
-# print(x)
-
-# print(x-Mb)
-# f =implementation(Mi, Mb, 2, 0.1, x)
-# print(Mb)
-# M = f.RBF(Mb)
-# print(np.linalg.norm(M, 2, axis=-1))
-
-# M2 = np.linalg.norm(Mb, 2, axis = -1)
-# print(M2)
-# M2 = f.RBF(M2)
-
-
-# print(np.linalg.norm(x-Mb, axis=-1).reshape(-1, 1))
-# u1, u2 = exact_solution(A=Mi, t=0.2, nu=1.1).hopf_cole_transform()
-# solution_domain = exact_solution(
-#     A=Mi, radius=0.2, t=0.2, nu=1.01, c_x=0.6, c_y=0.7)
-# Omega = solution_domain.domain()
-# u, v = solution_domain.hopf_cole_transform()
-
-# fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-# X, Y = Omega[:, 0], Omega[:, 1]
-# Z = v.copy()
-
-# print(X.shape, Y.shape, Z.shape)
-# print(Omega)
-# plt.scatter(Omega[:, 0], Omega[:, 1])
-# plt.scatter(X, Y)
-# plt.xlim(0, 1)
-# plt.ylim(0, 1)
-
-
-# ax.plot_surface(X, Y, Z, rstride=8, cstride=8, alpha=0.3)
-# cs = ax.contourf(X, Y, Z)
-# ax.plot3D(X, Y, Z)
-# ax.contour(cs, colors = 'k')
-# ax.grid(c='k', ls='-', alpha=0.3)
-# ax.clabel(cs, inline=True, fontsize=10)
-# cset = ax.contourf(X, Y, Z, zdir='z', offset=-100, cmap=cm.coolwarm)
-# cset = ax.contourf(X, Y, Z, zdir='x', offset=-40, cmap=cm.coolwarm)
-# cset = ax.contourf(X, Y, Z, zdir='y', offset=40, cmap=cm.coolwarm)
-# ax.plot_trisurf(x, y, Z, linewidth=0.2, antialiased=True, cmap=plt.cm.Spectral)
-# ax.set_xlabel('X')
-# #ax.set_xlim(-40, 40)
-# ax.set_ylabel('Y')
-# #ax.set_ylim(-40, 40)
-# ax.set_zlabel('Z')
-# #ax.set_zlim(-100, 100)
-
-# plt.show()
