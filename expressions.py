@@ -185,13 +185,13 @@ class assembled_matrix(operators):
     def laplacian_TPS(self, M):
         return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M)+1))
 
-    def u_0(self):
-        return np.sin(self.Mi[:, 0] + self.Mi[:, 1]).reshape(-1,1)
+    def X_0(self):
+        c1 = np.sin(self.Mi[:, 0].reshape(-1, 1) + self.Mi[:, 1].reshape(-1, 1))
+        c2 = np.cos(self.Mi[:, 1].reshape(-1, 1) - self.Mi[:, 0].reshape(-1, 1))
+        return np.hstack((c1, c2))
 
-    def F_m(self):
-        np.random.seed(9936)
-        init_val = np.random.random((self.ni, self.d))
-        return np.matmul(self.nu * self.lap_am().T - np.matmul(self.a_m().T, np.matmul(init_val, self.grad_am().T)), init_val)
+    def F_m(self, X0):
+        return np.matmul(self.nu * self.lap_am().T - np.matmul(self.a_m().T, np.matmul(X0, self.grad_am().T)), X0)
 
 
 class exact_solution(object):
@@ -272,7 +272,7 @@ xxx = Mb[:, 0].reshape(-1, 1) * poly_b[0, 0] + \
 # init_val = np.array([0.4, -0.2])
 
 aa = assembled_matrix(Mi, Mb, 1, 0.1, x, poly_b=poly_b)
-print(aa.u_0())
+print(aa.F_m())
 # print(poly_b[1,1])
 # print(np.linalg.norm(x-Mb, axis=-1).reshape(-1,1))
 # amm = assembled_matrix(Mi, Mb, 2, 0.1, x).grad_am()

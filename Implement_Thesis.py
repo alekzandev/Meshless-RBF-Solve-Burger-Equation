@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.linalg import lu_factor, lu_solve
 
+from expressions import *
+
 
 class Onestepmethod(object):
     def __init__(self, f, y0, t0, te, N, tol):
@@ -13,7 +15,7 @@ class Onestepmethod(object):
         self.h = (te-t0)/(N+1)
         self.N = N
         self.tol = tol
-        self.m = len(y0)
+        self.dm = len(y0.T)
         self.s = len(self.b)
 
     def step(self):
@@ -53,7 +55,8 @@ class RungeKutta_implicit(Onestepmethod):
         #J = np.array([[0, 1], [-1, 0]])
         #J = np.array([[0, 1], [-9.8*np.cos(yi[0]), 0]])
         stageVal = self.phi_solve(ti, yi, stageDer, J, M)
-        return np.array([np.dot(self.b, stageVal.reshape(self.s, self.m)[:, j]) for j in range(self.m)])
+        return np.dot(self.b, stageVal.reshape(self.s, self.dm))
+        #-|-return np.array([np.dot(self.b, stageVal.reshape(self.s, self.dm)[:, j]) for j in range(self.dm)])
 
     def phi_solve(self, t0, y0, initVal, J, M):
         '''
@@ -75,7 +78,7 @@ class RungeKutta_implicit(Onestepmethod):
         ______________
         The stage derivative Y'_i               
         '''
-        JJ = np.eye(self.s * self.m) - self.h * np.kron(self.A, J)
+        JJ = np.eye(self.s * self.dm) - self.h * np.kron(self.A, J)
         luFactor = lu_factor(JJ)
 
         for i in range(M):
@@ -111,12 +114,14 @@ class RungeKutta_implicit(Onestepmethod):
         Returns the substraction Y'_i-
         '''
 
-        stageDer_new = np.empty((self.s, self.m))
+        stageDer_new = np.empty((self.s, self.dm))
 
         for i in range(self.s):
 
-            stageVal = y_i + np.array([self.h * np.dot(
-                self.A[i, :], stageDer.reshape(self.s, self.m)[:, j]) for j in range(self.m)])
+            stageVal = y_i + self.h * np.dot(
+                self.A[i, :], stageDer.reshape(self.s, self.dm))
+            #-|-stageVal = y_i + np.array([self.h * np.dot(
+            #     self.A[i, :], stageDer.reshape(self.s, self.dm)[:, j]) for j in range(self.dm)])
 
             stageDer_new[i, :] = self.f(t_n + self.c[i] * self.h, stageVal)
 
@@ -130,7 +135,7 @@ class SDIRK(RungeKutta_implicit):
         '''
         alpha = self.A[0, 0]
 
-        JJ = np.eye(self.m) - self.h * alpha * J
+        JJ = np.eye(self.dm) - self.h * alpha * J
         luFactor = lu_factor(JJ)
 
         for i in range(M):
@@ -151,7 +156,7 @@ class SDIRK(RungeKutta_implicit):
         x = []
         for i in range(self.s):
             print(initVal)
-            rhs = -self.F(initVal.flatten(), t0, y0)[i * self.m:(i+1) * self.m] + np.sum(
+            rhs = -self.F(initVal.flatten(), t0, y0)[i * self.dm:(i+1) * self.dm] + np.sum(
                 [self.h * self.A[i, j] * np.dot(J, x[j]) for j in range(i)], axis=0)
             d = lu_solve(luFactor, rhs)
             x.append(d)
