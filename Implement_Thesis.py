@@ -117,7 +117,6 @@ class RungeKutta_implicit(Onestepmethod):
         '''
         Returns the substraction Y'_i-
         '''
-        print('F')
         stageDer_new = np.empty((self.s, self.dm))
         # print(stageDer.shape)
 
@@ -198,62 +197,3 @@ class SDIRK_tableau5s(SDIRK):
     ])
     b = np.array([25/24, -49/48, 125/16, -85/12, 1/4])
     c = np.array([1/4, 3/4, 11/20, 1/2, 1])
-
-
-t0, te = 0, 1.
-tol_newton = 1e-9
-tol_sol = 1e-5
-N = 100
-
-y0 = np.array([1])
-def f(t, y): return -5*y
-# y0 = np.array([2, 3])
-# def f(t, y): return np.dot(np.array([[0, 1], [-1, 0]]), y)
-
-# y0 = np.array([np.pi/2, 0])
-# f = lambda t,y: np.array([y[1], -9.8*np.sin(y[0])])
-
-
-# N = [2*n for n in range(100)]
-scalar = Gauss(f, y0, t0, te, N, tol_newton)
-#scalar = SDIRK_tableau2s(f, y0, t0, te, N, tol_newton)
-
-scalar.solve()
-S = scalar.solution
-
-t = S[:, 0]
-y = S[:, 1]
-a = np.exp((-5*t))
-error = np.abs(y-a)
-
-plt.plot(t, error)
-# # # plt.plot(t,a)
-plt.show()
-# def test_scalar():
-#     t0, te = 0, 0.1
-#     tol_newton = 1e-9
-#     tol_sol = 1e-5
-#     N = [2*n for n in range(100)]
-
-#     for method in [(Gauss, 6)]:#, (SDIRK_tableau2s, 3), (SDIRK_tableau5s, 4)]:
-#         stepsize = []
-#         mean_error = []
-#         for n in N:
-#             stepsize.append((te-t0/(n+1)))
-#             timeGrid = np.linspace(t0, te, n+2)
-#             expected = [(t, np.exp(-5*t)) for t in timeGrid]
-#             scalar = method[0](lambda t, y: -5*y,
-#                                np.array([1]), t0, te, n, tol_newton)
-#             scalar.solve()
-#             result = scalar.solution
-#             error = [np.abs(expected[i][1] - result[i][1])
-#                      for i in range(len(timeGrid))]
-#             mean = np.mean(error)
-
-#             mean_error.append(mean)
-
-#             print(mean_error)
-
-#     assert allclose(result, expected, atol=tol_sol)
-
-# test_scalar()

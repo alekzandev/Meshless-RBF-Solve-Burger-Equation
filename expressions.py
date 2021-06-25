@@ -186,12 +186,22 @@ class assembled_matrix(operators):
         return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1))
 
     def X_0(self):
-        c1 = np.sin(self.Mi[:, 0].reshape(-1, 1) + self.Mi[:, 1].reshape(-1, 1))
-        c2 = np.cos(self.Mi[:, 1].reshape(-1, 1) - self.Mi[:, 0].reshape(-1, 1))
+        c1 = np.sin(self.Mi[:, 0].reshape(-1, 1) +
+                    self.Mi[:, 1].reshape(-1, 1))
+        c2 = np.cos(self.Mi[:, 1].reshape(-1, 1) -
+                    self.Mi[:, 0].reshape(-1, 1))
         return np.hstack((c1, c2))
 
     def F_m(self, X0):
         return np.matmul(self.nu * self.lap_am().T - np.matmul(self.a_m().T, np.matmul(X0, self.grad_am().T)), X0)
+
+
+class initial_condition(assembled_matrix):
+    def F0(self):
+        for x in self.Mi:
+            assem_matrix = self.assembled_matrix(x=x)
+            X0 = assem_matrix.X_0()
+            yield assem_matrix.F_m(X0)[0]
 
 
 class exact_solution(object):
@@ -227,3 +237,4 @@ class exact_solution(object):
             (1 / (1 + np.exp((4*y - 4*x - self.t) / (32*self.nu))))
 
         return u, v
+

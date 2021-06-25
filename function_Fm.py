@@ -25,6 +25,6 @@ class interpolate(object):
             X0 = assem_matrix.X_0()
             yield assem_matrix.F_m(X0)[0]
 
-aa = interpolate(n=10)
+aa = interpolate(n=100)
 mlist = tuple(aa.F())
 print(np.vstack(mlist))
