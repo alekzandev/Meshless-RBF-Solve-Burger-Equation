@@ -16,17 +16,17 @@ class terms_uh(object):
     l: norm order (1,2,np.inf)
     '''
 
-    def __init__(self, Mi, Mb, beta, c, x, nu=1, poly_b=np.array([1]),  rbf='TPS', l=2):
+    def __init__(self, Mi, Mb, x, beta, c, nu=1, poly_b=np.array([1]),  rbf='TPS', l=2):
         self.Mi = Mi
         self.ni = Mi.shape[0]
         self.Mb = Mb
         self.nb = Mb.shape[0]
         self.d = Mi.shape[1]
+        self.x = x
         self.poly_b = poly_b
         self.dm = poly_b.shape[0]
         self.beta = beta
         self.c = c
-        self.x = x
         self.nu = nu
         self.rbf = rbf
         self.l = l
@@ -135,8 +135,8 @@ class terms_uh(object):
     def grad_am(self):
         return self.a_m_op(self.grad_TPS)
 
-    def b_m(self):
-        return np.matmul(self.C(), np.vstack((self.gamma_m(), self.theta_m()))) - np.matmul(self.B().transpose(), np.matmul(self.Sinv(), self.lambda_m()))
+    # def b_m(self):
+    #     return np.matmul(self.C(), np.vstack((self.gamma_m(), self.theta_m()))) - np.matmul(self.B().transpose(), np.matmul(self.Sinv(), self.lambda_m()))
 
 
 class operators(terms_uh):
@@ -195,6 +195,10 @@ class assembled_matrix(operators):
     def F_m(self, X0):
         return np.matmul(self.nu * self.lap_am().T - np.matmul(self.a_m().T, np.matmul(X0, self.grad_am().T)), X0)
 
+    def F0(self):
+        for x in self.Mi:
+            yield self.F_m(self.X_0, x)
+
 
 class initial_condition(assembled_matrix):
     def F0(self):
@@ -237,4 +241,3 @@ class exact_solution(object):
             (1 / (1 + np.exp((4*y - 4*x - self.t) / (32*self.nu))))
 
         return u, v
-
