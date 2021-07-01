@@ -15,25 +15,21 @@ class Onestepmethod(object):
         self.h = (te-t0)/(N+1)
         self.N = N
         self.tol = tol
-        self.dm = len(y0.T)
+        self.dm = y0.ndim
         self.s = len(self.b)
 
     def step(self):
-        print('step')
         ti, yi = self.grid[0], self.y0
         t_i = ti
-        yi = yi[0]
-        yield ti, yi
-        contador = 1
+        yield np.array([ti]), yi
+            
         for ti in self.grid[1:]:
-            print('cont:', contador)
             yi = yi + self.h*self.phi(t_i, yi)
             t_i = ti
-            yi = yi[0]
-            contador += 1
-            yield ti, yi
+            yield np.array([ti]), yi
 
     def solve(self):
+        #print(np.array(list(self.step()))[:,:,0])
         self.solution = np.array(list(self.step()))
 
 
@@ -49,7 +45,6 @@ class RungeKutta_implicit(Onestepmethod):
         y0 = 1xm vector, the last solution y_n. Where m is the lenght of the IC y_0 of IVP.
 
         '''
-        print('phi')
         M = 10
         stageDer = np.array(self.s*[self.f(ti, yi)])  # Initial value Y'_0
         #J = nd.Jacobian(self.f)([t0, y0[0]])

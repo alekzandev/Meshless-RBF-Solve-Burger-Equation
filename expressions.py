@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
 
-#from halton_points import HaltonPoints
+from halton_points import HaltonPoints
 
 
 class terms_uh(object):
@@ -16,15 +16,16 @@ class terms_uh(object):
     l: norm order (1,2,np.inf)
     '''
 
-    def __init__(self, Mi, Mb, x, beta, c, nu=1, poly_b=np.array([1]),  rbf='TPS', l=2):
-        self.Mi = Mi
-        self.ni = Mi.shape[0]
+    def __init__(self, Mb, npnts, beta, c, nu=1, poly_b=np.array([1]),  rbf='TPS', l=2):
+        # np.random.seed(9936)
         self.Mb = Mb
         self.nb = Mb.shape[0]
-        self.d = Mi.shape[1]
-        self.x = x
+        self.d = self.Mb.ndim
+        self.x = np.empty((2, ))
         self.poly_b = poly_b
         self.dm = poly_b.shape[0]
+        self.Mi = HaltonPoints(self.d, npnts).haltonPoints()
+        self.ni = self.Mi.shape[0]
         self.beta = beta
         self.c = c
         self.nu = nu
@@ -198,6 +199,23 @@ class assembled_matrix(operators):
     def F0(self):
         for x in self.Mi:
             yield self.F_m(self.X_0, x)
+
+    def J(self, X0):
+        return np.matmul(
+            self.nu * self.lap_am().T -
+            np.matmul(
+                self.a_m().T,
+                np.matmul(
+                    X0,
+                    self.grad_am().T)),
+            np.ones((self.ni, self.d))) - \
+            np.matmul(
+            np.matmul(
+                self.a_m().T,
+                np.matmul(
+                    np.ones((self.ni, self.d)),
+                    self.grad_am().T)),
+            X0)
 
 
 class initial_condition(assembled_matrix):
