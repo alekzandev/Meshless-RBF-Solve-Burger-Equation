@@ -12,9 +12,9 @@ def fill_distance(n): return 2**(-n)
 
 n, d = 7, 2
 
-M = HaltonPoints(2, N(n, d)).haltonPoints()
-
-print (fill_distance(n))
+M = HaltonPoints(2, N(n, d)).haltonPoints()*10
+print(len(M))
+print (fill_distance(n)*10)
 
 x = M[:, 0]
 y = M[:, 1]
