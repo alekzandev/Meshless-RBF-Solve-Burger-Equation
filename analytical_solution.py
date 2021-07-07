@@ -20,16 +20,16 @@ def sol_burgers_2D_homogeneous(X, t, nu=1, alpha=0.5):
     return first_comp, second_comp
 
 
-n = 30
-interior_points = HaltonPoints(2, n).haltonPoints()
-x, y = interior_points[:, 0], interior_points[:, 1]
+# n = 30
+# interior_points = HaltonPoints(2, n).haltonPoints()
+# x, y = interior_points[:, 0], interior_points[:, 1]
 # x, y = np.hstack((-x, x)), np.hstack((-y, y))
-X, Y = np.meshgrid(x, y, sparse=True)
-t = 0.2
+#X, Y = np.meshgrid(x, y, sparse=True)
+#t = 0.2
 
-comp_x, comp_y = sol_burgers_2D_homogeneous(interior_points, t)
+# comp_x, comp_y = sol_burgers_2D_homogeneous(interior_points, t)
 
-print(comp_x)
+#print(comp_x)
 # z = comp_y
 # fig = plt.figure()
 # ax = fig.gca(projection='3d')
