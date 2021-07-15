@@ -1,12 +1,13 @@
 # pylint: disable=E1101
 # pylint: disable=all
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib import cm
-from matplotlib.ticker import LinearLocator
 
 from halton_points import HaltonPoints
+
+#from matplotlib import cm
+#from matplotlib.ticker import LinearLocator
 
 
 class terms_uh(object):
@@ -193,29 +194,33 @@ class assembled_matrix(operators):
                     self.Mi[:, 0].reshape(-1, 1))
         return np.hstack((c1, c2))
 
+    # def F_m(self, X0):
+    #     return np.matmul(self.nu * self.lap_am().T - np.matmul(self.a_m().T, np.matmul(X0, self.grad_am().T)), X0)
     def F_m(self, X0):
-        return np.matmul(self.nu * self.lap_am().T - np.matmul(self.a_m().T, np.matmul(X0, self.grad_am().T)), X0)
+        return np.matmul(self.nu * self.lap_am().T, X0)
 
     def F0(self):
         for x in self.Mi:
             yield self.F_m(self.X_0, x)
+    # def J(self, X0):
+    #     return np.matmul(
+    #         self.nu * self.lap_am().T -
+    #         np.matmul(
+    #             self.a_m().T,
+    #             np.matmul(
+    #                 X0,
+    #                 self.grad_am().T)),
+    #         np.ones((self.ni, self.d))) - \
+    #         np.matmul(
+    #         np.matmul(
+    #             self.a_m().T,
+    #             np.matmul(
+    #                 np.ones((self.ni, self.d)),
+    #                 self.grad_am().T)),
+    #         X0)
 
-    def J(self, X0):
-        return np.matmul(
-            self.nu * self.lap_am().T -
-            np.matmul(
-                self.a_m().T,
-                np.matmul(
-                    X0,
-                    self.grad_am().T)),
-            np.ones((self.ni, self.d))) - \
-            np.matmul(
-            np.matmul(
-                self.a_m().T,
-                np.matmul(
-                    np.ones((self.ni, self.d)),
-                    self.grad_am().T)),
-            X0)
+    def J(self):
+        return self.nu * self.lap_am().T
 
 
 class initial_condition(assembled_matrix):

@@ -25,10 +25,12 @@ X0 = uh.X_0()
 def Fm(uh, X0):
     for xn in uh.Mi:
         uh.x = xn
-        yield uh.F_m(X0)[0], uh.J(X0)[0]
+        yield uh.F_m(X0)[0], uh.J()[0]
 
 
-FJ = np.vstack(tuple(Fm(uh, X0)))
-F, J = FJ[::2], FJ[1::2]
+FJ = np.hstack(tuple(Fm(uh, X0))) #FJ
+F, J = np.vstack(FJ[::2]), np.vstack(FJ[1::2])
 
-print(F)
+
+#print(np.vstack([F]*2))
+print(J)
