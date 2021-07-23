@@ -1,5 +1,5 @@
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 class explicit_RungeKutta(object):
     def __init__(self, f, u0, t0, te, N, uh):
@@ -21,34 +21,40 @@ class explicit_RungeKutta(object):
         return self.u0 + self.dt * self.f(t + self.dt, ub, self.uh)
 
     def stagef(self, t):
+        ii = (self.f(t, self.u0, self.uh)
+                           + 2*self.f(t + self.dt/2, self.stage2(t), self.uh)
+                           + 2*self.f(t + self.dt/2, self.stage3(t), self.uh)
+                           + self.f(t + self.dt, self.stage4(t), self.uh))
+        print(ii)
         return self.u0\
             + self.dt/6 * (self.f(t, self.u0, self.uh)
                            + 2*self.f(t + self.dt/2, self.stage2(t), self.uh)
                            + 2*self.f(t + self.dt/2, self.stage3(t), self.uh)
                            + self.f(t + self.dt, self.stage4(t), self.uh))
 
-    def solve(self):
+    def step(self):
         u_n = self.u0
         yield u_n
-        for t in self.timegrid:
+        #print(self.timegrid)
+        for t in self.timegrid[1:]:
             u_n = self.stagef(t)
             self.u0 = u_n
             yield u_n
 
-    def solution(self):
-        return np.array(tuple(self.solve()))
+    def solve(self):
+        self.solution = np.array(tuple(self.step()))
 
 
 # t0, te = 0, 1.
 # tol_newton = 1e-9
 # tol_sol = 1e-5
-# N = 5
+# N = 10000
 # t = 0
 
 # u0 = np.array([2., 3.])
 # M = np.array([[0, 1], [-1, 0]])
-# def f(t,y): return np.dot(M, y)
-# system = explicit_RungeKutta(f, u0, t0, te, N)
+# def f(t,y,r): return np.dot(M, y)
+# system = explicit_RungeKutta(f, u0, t0, te, N, 2)
 
 # timegrid  = np.linspace(t0, te, N+2)
 # def exact_sol(timegrid):
@@ -58,12 +64,8 @@ class explicit_RungeKutta(object):
 #         yield np.hstack((y1,y2))
 
 # system.solve()
-# S = system.solution()
-# print(S)
-# # t = S[:, 0]
-# # y = S[:, 1]
+# S = system.solution
 # a = np.vstack(tuple(exact_sol(timegrid)))
-# print(a)
-# error = np.linalg.norm(np.vstack(y)-a, axis=-1)
-# plt.plot(np.vstack(t), error)
+# error = np.linalg.norm(S-a, axis=-1)
+# plt.plot(timegrid, error)
 # plt.show()
