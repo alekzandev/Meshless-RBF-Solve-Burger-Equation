@@ -21,5 +21,5 @@ y = S[:, 1]
 a = np.exp((-5*t))
 error = np.abs(y-a)
 
-plt.plot(t, error)
-plt.show()
+# plt.plot(t, error)
+# plt.show()
