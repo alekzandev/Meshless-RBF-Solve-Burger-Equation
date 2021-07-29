@@ -56,7 +56,7 @@ class terms_uh(object):
         col1 = self.poly_basis(self.Mb, 0)
         col2 = self.poly_basis(self.Mb, 1)
         col3 = self.poly_basis(self.Mb, 2)
-        # return np.ones((self.nb, self.dm))  # .reshape(-1, 1)
+        #return np.ones((self.nb, self.dm))  # .reshape(-1, 1)
         return np.hstack((col1, col2, col3))
 
     def A(self):
@@ -74,7 +74,7 @@ class terms_uh(object):
         col1 = self.poly_basis(self.Mi, 0)
         col2 = self.poly_basis(self.Mi, 1)
         col3 = self.poly_basis(self.Mi, 2)
-        # return np.ones((self.ni, self.dm))
+        #return np.ones((self.ni, self.dm))
         return np.hstack((col1, col2, col3))
 
     def B(self):
