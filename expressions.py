@@ -46,17 +46,26 @@ class terms_uh(object):
     def K2(self):
         return self.RBF(self.norm_x(self.matrix_K(self.Mb)))
 
+    def q(self, x, y, i):
+        if i == 1:
+            return 2*y
+        elif i == 2:
+            return 4*x*y
+        elif i == 3:
+            return 8*x*y**2 - 4*x
+
     def poly_basis(self, M, i):
-        return M[:, 0].reshape(-1, 1) * self.poly_b[i, 0] + M[:, 1].reshape(-1, 1) * self.poly_b[i, 1] + self.poly_b[i, 2]
+        #return M[:, 0].reshape(-1, 1) * self.poly_b[i, 0] + M[:, 1].reshape(-1, 1) * self.poly_b[i, 1] + self.poly_b[i, 2]
+        return self.q(M[:, 0].reshape(-1, 1), M[:, 1].reshape(-1, 1), i)
 
     def O2(self):
         return np.zeros((self.dm, self.dm))
 
     def Q2(self):
-        col1 = self.poly_basis(self.Mb, 0)
-        col2 = self.poly_basis(self.Mb, 1)
-        col3 = self.poly_basis(self.Mb, 2)
-        #return np.ones((self.nb, self.dm))  # .reshape(-1, 1)
+        col1 = self.poly_basis(self.Mb, 1)
+        col2 = self.poly_basis(self.Mb, 2)
+        col3 = self.poly_basis(self.Mb, 3)
+        # return np.ones((self.nb, self.dm))  # .reshape(-1, 1)
         return np.hstack((col1, col2, col3))
 
     def A(self):
@@ -71,10 +80,10 @@ class terms_uh(object):
         return self.RBF(self.norm_x(self.matrix_M()))
 
     def Q1(self):
-        col1 = self.poly_basis(self.Mi, 0)
-        col2 = self.poly_basis(self.Mi, 1)
-        col3 = self.poly_basis(self.Mi, 2)
-        #return np.ones((self.ni, self.dm))
+        col1 = self.poly_basis(self.Mi, 1)
+        col2 = self.poly_basis(self.Mi, 2)
+        col3 = self.poly_basis(self.Mi, 3)
+        # return np.ones((self.ni, self.dm))
         return np.hstack((col1, col2, col3))
 
     def B(self):
@@ -193,9 +202,9 @@ class assembled_matrix(operators):
         # c2 = np.cos(self.Mi[:, 1].reshape(-1, 1) -
         #             self.Mi[:, 0].reshape(-1, 1))
         n = np.linalg.norm(self.Mi, axis=-1)
-        c1 = self.Mi[:,0]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
-        c2 = self.Mi[:,1]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
-        return np.hstack((c1.reshape(-1,1), c2.reshape(-1,1)))
+        c1 = self.Mi[:, 0]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
+        c2 = self.Mi[:, 1]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
+        return np.hstack((c1.reshape(-1, 1), c2.reshape(-1, 1)))
 
     def F_m(self, X0):
         return np.matmul(self.nu * self.lap_am().T - np.matmul(self.a_m().T, np.matmul(X0, self.grad_am().T)), X0)
