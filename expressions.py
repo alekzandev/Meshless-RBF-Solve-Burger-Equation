@@ -17,7 +17,7 @@ class terms_uh(object):
     l: norm order (1,2,np.inf)
     '''
 
-    def __init__(self, Mb, npnts, beta, c, nu=1, poly_b=np.array([1]),  rbf='TPS', l=2):
+    def __init__(self, Mb, npnts, beta, c, nu=1, mu=0.1, poly_b=np.array([1]),  rbf='TPS', l=2):
         # np.random.seed(9936)
         self.Mb = Mb
         self.nb = Mb.shape[0]
@@ -30,6 +30,7 @@ class terms_uh(object):
         self.beta = beta
         self.c = c
         self.nu = nu
+        self.mu = mu
         self.rbf = rbf
         self.l = l
 
@@ -53,6 +54,22 @@ class terms_uh(object):
             return 4*x*y
         elif i == 3:
             return 8*x*y**2 - 4*x
+
+    def lap_q(self, x, i):
+        if i==1:
+            return 0
+        elif i==2:
+            return 0
+        elif i==3:
+            return 16*x
+
+    def grad_q(self, x, y, i):
+        if i==1:
+            return np.hstack((0, 2)).reshape(1,-1)
+        elif i==2:
+            return np.hstack((4 * y, 4 * x)).reshape(1,-1)
+        elif i==3:
+            return np.hstack((8 * y**2 - 4, 16 * x *y)).reshape(1,-1)
 
     def poly_basis(self, M, i):
         #return M[:, 0].reshape(-1, 1) * self.poly_b[i, 0] + M[:, 1].reshape(-1, 1) * self.poly_b[i, 1] + self.poly_b[i, 2]
@@ -115,25 +132,42 @@ class terms_uh(object):
         elif phi_m == self.grad_TPS:
             return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)))
 
-    def theta_m(self):
-        row1 = self.x[0] * self.poly_b[0, 0] + self.x[1] * \
-            self.poly_b[0, 1] + self.poly_b[0, 2]
-        row2 = self.x[0] * self.poly_b[1, 0] + self.x[1] * \
-            self.poly_b[1, 1] + self.poly_b[1, 2]
-        row3 = self.x[0] * self.poly_b[2, 0] + self.x[1] * \
-            self.poly_b[2, 1] + self.poly_b[2, 2]
-        return np.vstack((row1, row2, row3))
+    def theta_m(self, phi_m):
+        if phi_m == self.RBF:
+            row1 = self.q(self.x[0], self.x[1], 1)
+            row2 = self.q(self.x[0], self.x[1], 2)
+            row3 = self.q(self.x[0], self.x[1], 2)
+            return np.vstack((row1, row2, row3))
+        elif phi_m == self.laplacian_TPS:
+            row1 = self.lap_q(self.x[0],1)
+            row2 = self.lap_q(self.x[0], 2)
+            row3 = self.lap_q(self.x[0], 3)
+            return np.vstack((row1, row2, row3))
+        else:
+            row1 = self.grad_q(self.x[0], self.x[1], 1)
+            row2 = self.grad_q(self.x[0], self.x[1], 2)
+            row3 = self.grad_q(self.x[0], self.x[1], 3)
+            return np.vstack((row1, row2, row3))
+            
+
+            # row1 = self.x[0] * self.poly_b[0, 0] + self.x[1] * \
+            #     self.poly_b[0, 1] + self.poly_b[0, 2]
+            # row2 = self.x[0] * self.poly_b[1, 0] + self.x[1] * \
+            #     self.poly_b[1, 1] + self.poly_b[1, 2]
+            # row3 = self.x[0] * self.poly_b[2, 0] + self.x[1] * \
+            #     self.poly_b[2, 1] + self.poly_b[2, 2]
+            # return np.vstack((row1, row2, row3))
         # return np.ones((self.dm, 1))
 
     def a_m_op(self, lin_op):
         if lin_op == self.laplacian_TPS or lin_op == self.RBF:
-            return np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((self.gamma_m(lin_op), self.theta_m()))) - self.lambda_m(lin_op))
+            return np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))) - self.lambda_m(lin_op))
         elif lin_op == self.grad_TPS:
             return np.matmul(
                 self.Sinv(),
                 np.matmul(
                     self.B(),
-                    np.vstack((self.gamma_m(lin_op), self.poly_b[:, 0:2]))
+                    np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
                 ) - self.lambda_m(lin_op)
             )
 
@@ -196,7 +230,7 @@ class assembled_matrix(operators):
     def laplacian_TPS(self, M):
         return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1))
 
-    def X_0(self, alpha=0.1):
+    def X_0(self, alpha=1.):
         # c1 = np.sin(self.Mi[:, 0].reshape(-1, 1) +
         #             self.Mi[:, 1].reshape(-1, 1))
         # c2 = np.cos(self.Mi[:, 1].reshape(-1, 1) -
@@ -207,7 +241,7 @@ class assembled_matrix(operators):
         return np.hstack((c1.reshape(-1, 1), c2.reshape(-1, 1)))
 
     def F_m(self, X0):
-        return np.matmul(self.nu * self.lap_am().T - np.matmul(self.a_m().T, np.matmul(X0, self.grad_am().T)), X0)
+        return np.matmul(self.nu * self.lap_am().T - np.matmul(self.mu * self.a_m().T, np.matmul(X0, self.grad_am().T)), X0)
     # def F_m(self, X0):
     #     return np.matmul(self.nu * self.lap_am().T, X0)
 

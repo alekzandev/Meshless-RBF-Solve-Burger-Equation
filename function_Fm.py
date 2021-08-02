@@ -1,21 +1,20 @@
+import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
 import pandas as pd
+import seaborn as sns
 
 from explicit_RK import *
 from expressions import *
 from halton_points import HaltonPoints
-import matplotlib.pyplot as plt
 
 
 def Fm(t, X0, uh):
     F = []
     for xn in uh.Mi:
         uh.x = xn
-        # yield uh.F_m(X0)[0], uh.J()[0]
         F.append(uh.F_m(X0)[0])
+        break
     return np.vstack(F)
-
 
 # Mb = np.array([
 #     #[0., 0.],
@@ -43,28 +42,56 @@ fxl[:, 0] = 0
 fxr = r.copy()
 fxr[:, 0] = 1
 fyu = r.copy()
-fyu[:,1] = 0
+fyu[:, 1] = 0
 fyd = r.copy()
-fyd[:,1] = 1
+fyd[:, 1] = 1
 
 Mb = np.vstack((fxl, fxr, fyu, fyd))
 
 poly_b = np.array([[-1, -1, 1], [1/2, 3/2, -1], [3/2, 1/8, -3/8]])
 npnts = nf*4
 t0, te = 0, 1.
-N = 50
-
-uh = assembled_matrix(Mb, npnts, 2, 1, poly_b=poly_b)
+N = 500
+dt = (te-t0)/(N+2)
+uh = assembled_matrix(Mb=Mb, npnts=npnts, beta=2, c=1, poly_b=poly_b)
 X0 = uh.X_0()
+Xi = Fm(1, X0, uh)
+print('X0')
+print(X0)
+print('X1')
+print(X0 + dt * Xi)
 
+dt+=dt
+X0 = X0 + dt * Xi
+Xi = Fm(1, X0, uh)
+print('X2')
+print(X0 + dt * Xi)
+
+dt+=dt
+X0 = X0 + dt * Xi
+Xi = Fm(1, X0, uh)
+print('X3')
+print(X0 + dt * Xi)
+
+
+df = pd.DataFrame(np.hstack((uh.Mi, X0)), columns=['x', 'y', 'u', 'v'])
+
+cmap = sns.cubehelix_palette(rot=-.2, as_cmap=True)
+sns.scatterplot(x='x', y='y', data=df, hue='u', palette=cmap)
+plt.show()
 #system = explicit_RungeKutta(Fm, X0, t0, te, N, uh)
-#system.solve()
+# system.solve()
 #S = system.solution
-#print(uh.Mi)
+# print(uh.Mi)
 # m= uh.M()
 # q2 = uh.Q2()
 # k1 = uh.K1()
 # q1 = uh.Q1()
+
+# mq=np.hstack((m, q1))
+# mqt=np.vstack((m.T, q1.T))
+# mult1 = np.matmul()
+
 # k2 = uh.K2()
 # q2 = uh.Q2()
 # o2 = uh.O2()
