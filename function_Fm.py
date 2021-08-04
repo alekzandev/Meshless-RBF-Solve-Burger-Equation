@@ -8,7 +8,7 @@ from expressions import *
 from halton_points import HaltonPoints
 
 
-def Fm(t, X0, uh):
+def Fm(X0, uh):
     F = []
     for xn in uh.Mi:
         uh.x = xn
@@ -35,7 +35,7 @@ def Fm(t, X0, uh):
 #     #[1/6, 1],
 #     #[1/4, 0]
 # ])
-nf = 18
+nf = 2
 r = HaltonPoints(2, nf).haltonPoints()
 fxl = r.copy()
 fxl[:, 0] = 0
@@ -51,34 +51,28 @@ Mb = np.vstack((fxl, fxr, fyu, fyd))
 poly_b = np.array([[-1, -1, 1], [1/2, 3/2, -1], [3/2, 1/8, -3/8]])
 npnts = nf*4
 t0, te = 0, 1.
-N = 500
-dt = (te-t0)/(N+2)
+N = 10
+timegrid = np.linspace(t0,te, N)
+
 uh = assembled_matrix(Mb=Mb, npnts=npnts, beta=2, c=1, poly_b=poly_b)
 X0 = uh.X_0()
-Xi = Fm(1, X0, uh)
-print('X0')
-print(X0)
-print('X1')
-print(X0 + dt * Xi)
 
-dt+=dt
-X0 = X0 + dt * Xi
-Xi = Fm(1, X0, uh)
-print('X2')
-print(X0 + dt * Xi)
+def FDM_time(timegrid, Xi, uh):
+    solution = dict()
+    for dt in timegrid:
+        solution[dt] = Xi
+        Xi = Xi + dt*Fm(Xi, uh)
+    return solution
 
-dt+=dt
-X0 = X0 + dt * Xi
-Xi = Fm(1, X0, uh)
-print('X3')
-print(X0 + dt * Xi)
+sol = FDM_time(timegrid, X0, uh)
+print(sol)
+# print(X0[0,:].reshape(1,-1))
+# print(0.01*Fm(X0, uh))
+# df = pd.DataFrame(np.hstack((uh.Mi, X0)), columns=['x', 'y', 'u', 'v'])
 
-
-df = pd.DataFrame(np.hstack((uh.Mi, X0)), columns=['x', 'y', 'u', 'v'])
-
-cmap = sns.cubehelix_palette(rot=-.2, as_cmap=True)
-sns.scatterplot(x='x', y='y', data=df, hue='u', palette=cmap)
-plt.show()
+# cmap = sns.cubehelix_palette(rot=-.2, as_cmap=True)
+# sns.scatterplot(x='x', y='y', data=df, hue='u', palette=cmap)
+# plt.show()
 #system = explicit_RungeKutta(Fm, X0, t0, te, N, uh)
 # system.solve()
 #S = system.solution
