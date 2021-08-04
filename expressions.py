@@ -230,7 +230,7 @@ class assembled_matrix(operators):
     def laplacian_TPS(self, M):
         return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1))
 
-    def X_0(self, alpha=1.15):
+    def X_0(self, alpha=1):
         # c1 = np.sin(self.Mi[:, 0].reshape(-1, 1) +
         #             self.Mi[:, 1].reshape(-1, 1))
         # c2 = np.cos(self.Mi[:, 1].reshape(-1, 1) -

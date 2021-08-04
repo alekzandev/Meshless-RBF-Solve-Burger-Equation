@@ -13,7 +13,6 @@ def Fm(X0, uh):
     for xn in uh.Mi:
         uh.x = xn
         F.append(uh.F_m(X0)[0])
-        break
     return np.vstack(F)
 
 # Mb = np.array([
@@ -51,8 +50,8 @@ Mb = np.vstack((fxl, fxr, fyu, fyd))
 poly_b = np.array([[-1, -1, 1], [1/2, 3/2, -1], [3/2, 1/8, -3/8]])
 npnts = nf*4
 t0, te = 0, 1.
-N = 10
-timegrid = np.linspace(t0,te, N)
+N = 100
+timegrid = np.linspace(0, 0.005)#np.linspace(t0,te, N)
 
 uh = assembled_matrix(Mb=Mb, npnts=npnts, beta=2, c=1, poly_b=poly_b)
 X0 = uh.X_0()
@@ -63,9 +62,25 @@ def FDM_time(timegrid, Xi, uh):
         solution[dt] = Xi
         Xi = Xi + dt*Fm(Xi, uh)
     return solution
-
-sol = FDM_time(timegrid, X0, uh)
-print(sol)
+# print('X0')
+# print(X0)
+# X0 = X0 + 0.0001*Fm(X0, uh)
+# print('X1')
+# print(X0)
+# X0 = X0 + 0.0002*Fm(X0, uh)
+# print('X2')
+# print(X0)
+# X0 = X0 + 0.0003*Fm(X0, uh)
+# print('X3')
+# print(X0)
+# X0 = X0 + 0.0004*Fm(X0, uh)
+# print('X4')
+# print(X0)
+#sol = FDM_time(timegrid, X0, uh)
+#print(sol)
+p = uh.lap_q
+Mi = uh.Mi
+print(p(Mi[:,0], 2))
 # print(X0[0,:].reshape(1,-1))
 # print(0.01*Fm(X0, uh))
 # df = pd.DataFrame(np.hstack((uh.Mi, X0)), columns=['x', 'y', 'u', 'v'])
