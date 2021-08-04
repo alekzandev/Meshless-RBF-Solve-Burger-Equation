@@ -17,7 +17,7 @@ class terms_uh(object):
     l: norm order (1,2,np.inf)
     '''
 
-    def __init__(self, Mb, npnts, c, beta=1, nu=0.1, mu=0.5, poly_b=np.array([1]),  rbf='TPS', l=2):
+    def __init__(self, Mb, npnts, c=1, beta=1, nu=0.1, mu=0.5, poly_b=np.array([1]),  rbf='TPS', l=2):
         # np.random.seed(9936)
         self.Mb = Mb
         self.nb = Mb.shape[0]
@@ -36,9 +36,9 @@ class terms_uh(object):
 
     def RBF(self, M):
         if self.rbf == 'TPS':
-            return (-1)**(self.beta + 1) * M**(2*self.beta) * np.log(M+1e-20)
+            return (-1)**(self.beta + 1) * M**(2*self.beta) * np.log(M+1e-80)
         elif self.rbf == 'MQ':
-            return (-1)**self.beta * (self.c**2 + M ** 2)**self.beta
+            return (-1)**(int(self.beta)+1) * (self.c**2 + M ** 2)**self.beta
         elif self.rbf == 'radial_powers':
             return (-1)**int(self.beta/2) * self.norm_x(M)**self.beta
         elif self.rbf == 'rbf_ut':
@@ -56,23 +56,23 @@ class terms_uh(object):
             return 8*x*y**2 - 4*x
 
     def lap_q(self, x, i):
-        if i==1:
+        if i == 1:
             return 0
-        elif i==2:
+        elif i == 2:
             return 0
-        elif i==3:
+        elif i == 3:
             return 16*x
 
     def grad_q(self, x, y, i):
-        if i==1:
-            return np.hstack((0, 2)).reshape(1,-1)
-        elif i==2:
-            return np.hstack((4 * y, 4 * x)).reshape(1,-1)
-        elif i==3:
-            return np.hstack((8 * y**2 - 4, 16 * x *y)).reshape(1,-1)
+        if i == 1:
+            return np.hstack((0, 2)).reshape(1, -1)
+        elif i == 2:
+            return np.hstack((4 * y, 4 * x)).reshape(1, -1)
+        elif i == 3:
+            return np.hstack((8 * y**2 - 4, 16 * x * y)).reshape(1, -1)
 
     def poly_basis(self, M, i):
-        #return M[:, 0].reshape(-1, 1) * self.poly_b[i, 0] + M[:, 1].reshape(-1, 1) * self.poly_b[i, 1] + self.poly_b[i, 2]
+        # return M[:, 0].reshape(-1, 1) * self.poly_b[i, 0] + M[:, 1].reshape(-1, 1) * self.poly_b[i, 1] + self.poly_b[i, 2]
         return self.q(M[:, 0].reshape(-1, 1), M[:, 1].reshape(-1, 1), i)
 
     def O2(self):
@@ -139,7 +139,7 @@ class terms_uh(object):
             row3 = self.q(self.x[0], self.x[1], 2)
             return np.vstack((row1, row2, row3))
         elif phi_m == self.laplacian_TPS:
-            row1 = self.lap_q(self.x[0],1)
+            row1 = self.lap_q(self.x[0], 1)
             row2 = self.lap_q(self.x[0], 2)
             row3 = self.lap_q(self.x[0], 3)
             return np.vstack((row1, row2, row3))
@@ -148,7 +148,6 @@ class terms_uh(object):
             row2 = self.grad_q(self.x[0], self.x[1], 2)
             row3 = self.grad_q(self.x[0], self.x[1], 3)
             return np.vstack((row1, row2, row3))
-            
 
             # row1 = self.x[0] * self.poly_b[0, 0] + self.x[1] * \
             #     self.poly_b[0, 1] + self.poly_b[0, 2]
@@ -211,24 +210,26 @@ class operators(terms_uh):
 class assembled_matrix(operators):
     def grad_TPS(self, M):
         op = self.op
-        if op == "lambda":
-            comp_x = (M**(2*self.beta-1)).reshape(-1, 1) *\
-                self.matrix_lamb_gamm_thet(self.Mi)[:, 0].reshape(-1, 1) *\
-                (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
-            comp_y = (M**(2*self.beta-1)).reshape(-1, 1) *\
-                self.matrix_lamb_gamm_thet(self.Mi)[:, 1].reshape(-1, 1) *\
-                (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
-        elif op == "gamma":
-            comp_x = (M**(2*self.beta-1)).reshape(-1, 1) *\
-                self.matrix_lamb_gamm_thet(self.Mb)[:, 0].reshape(-1, 1) *\
-                (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
-            comp_y = (M**(2*self.beta-1)).reshape(-1, 1) *\
-                self.matrix_lamb_gamm_thet(self.Mb)[:, 1].reshape(-1, 1) *\
-                (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
-        return np.hstack((comp_x, comp_y))
+        if self.rbf == 'TPS':
+            if op == "lambda":
+                comp_x = (M**(2*self.beta-1)).reshape(-1, 1) *\
+                    self.matrix_lamb_gamm_thet(self.Mi)[:, 0].reshape(-1, 1) *\
+                    (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
+                comp_y = (M**(2*self.beta-1)).reshape(-1, 1) *\
+                    self.matrix_lamb_gamm_thet(self.Mi)[:, 1].reshape(-1, 1) *\
+                    (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
+            elif op == "gamma":
+                comp_x = (M**(2*self.beta-1)).reshape(-1, 1) *\
+                    self.matrix_lamb_gamm_thet(self.Mb)[:, 0].reshape(-1, 1) *\
+                    (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
+                comp_y = (M**(2*self.beta-1)).reshape(-1, 1) *\
+                    self.matrix_lamb_gamm_thet(self.Mb)[:, 1].reshape(-1, 1) *\
+                    (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
+            return np.hstack((comp_x, comp_y))
 
     def laplacian_TPS(self, M):
-        return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1))
+        if self.rbf == 'TPS':
+            return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1))
 
     def X_0(self, alpha=1):
         # c1 = np.sin(self.Mi[:, 0].reshape(-1, 1) +

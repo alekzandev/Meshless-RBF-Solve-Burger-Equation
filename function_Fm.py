@@ -54,7 +54,7 @@ t0, te = 0, 1.
 N = 100
 timegrid = np.linspace(0, 1)#np.linspace(t0,te, N)
 
-uh = assembled_matrix(Mb=Mb, npnts=npnts, c=1, poly_b=poly_b)
+uh = assembled_matrix(Mb=Mb, npnts=npnts, poly_b=poly_b)
 X0 = uh.X_0()
 
 def FDM_time(timegrid, Xi, uh):
@@ -93,10 +93,10 @@ def FDM_time(timegrid, Xi, uh):
 # print(uh.Mi)
 # m= uh.M()
 # q2 = uh.Q2()
-k1 = uh.K1()
-print(k1.shape)
+# k1 = uh.K1()
 # q1 = uh.Q1()
-
+a = uh.A()
+print(np.linalg.inv(a))
 # mq=np.hstack((m, q1))
 # mqt=np.vstack((m.T, q1.T))
 # mult1 = np.matmul()
