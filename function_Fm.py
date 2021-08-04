@@ -49,12 +49,12 @@ fyd[:, 1] = 1
 Mb = np.vstack((fxl, fxr, fyu, fyd))
 
 poly_b = np.array([[-1, -1, 1], [1/2, 3/2, -1], [3/2, 1/8, -3/8]])
-npnts = nf*4
+npnts = 3
 t0, te = 0, 1.
 N = 100
 timegrid = np.linspace(0, 1)#np.linspace(t0,te, N)
 
-uh = assembled_matrix(Mb=Mb, npnts=npnts, beta=2, c=1, poly_b=poly_b)
+uh = assembled_matrix(Mb=Mb, npnts=npnts, c=1, poly_b=poly_b)
 X0 = uh.X_0()
 
 def FDM_time(timegrid, Xi, uh):
@@ -79,8 +79,8 @@ def FDM_time(timegrid, Xi, uh):
 # print(X0)
 # uh.x = [0.5, 0.333333333]
 # Fm(X0, uh)
-sol = FDM_time(timegrid, X0, uh)
-print(sol)
+# sol = FDM_time(timegrid, X0, uh)
+# print(sol)
 
 # df = pd.DataFrame(np.hstack((uh.Mi, X0)), columns=['x', 'y', 'u', 'v'])
 
@@ -93,7 +93,8 @@ print(sol)
 # print(uh.Mi)
 # m= uh.M()
 # q2 = uh.Q2()
-# k1 = uh.K1()
+k1 = uh.K1()
+print(k1.shape)
 # q1 = uh.Q1()
 
 # mq=np.hstack((m, q1))
