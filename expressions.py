@@ -17,7 +17,7 @@ class terms_uh(object):
     l: norm order (1,2,np.inf)
     '''
 
-    def __init__(self, Mb, npnts, beta, c, nu=1, mu=0.1, poly_b=np.array([1]),  rbf='TPS', l=2):
+    def __init__(self, Mb, npnts, beta, c, nu=0.1, mu=0.5, poly_b=np.array([1]),  rbf='TPS', l=2):
         # np.random.seed(9936)
         self.Mb = Mb
         self.nb = Mb.shape[0]
@@ -163,7 +163,7 @@ class terms_uh(object):
         if lin_op == self.laplacian_TPS or lin_op == self.RBF:
             return np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))) - self.lambda_m(lin_op))
         elif lin_op == self.grad_TPS:
-            return np.matmul(
+            return -np.matmul(
                 self.Sinv(),
                 np.matmul(
                     self.B(),
@@ -240,10 +240,10 @@ class assembled_matrix(operators):
         c2 = self.Mi[:, 1]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
         return np.hstack((c1.reshape(-1, 1), c2.reshape(-1, 1)))
 
-    def F_m(self, X0):
-        return np.matmul(self.nu * self.lap_am().T - np.matmul(self.mu * self.a_m().T, np.matmul(X0, self.grad_am().T)), X0)
     # def F_m(self, X0):
-    #     return np.matmul(self.nu * self.lap_am().T, X0)
+    #     return np.matmul(self.nu * self.lap_am().T - np.matmul(self.mu * self.a_m().T, np.matmul(X0, self.grad_am().T)), X0)
+    def F_m(self, X0):
+        return np.matmul(self.nu * self.lap_am().T, X0)
 
     def F0(self):
         for x in self.Mi:
