@@ -91,7 +91,6 @@ class terms_uh(object):
         return np.vstack((A1, A2))
 
     def K1(self):
-        print(self.matrix_K(self.Mi))
         return self.RBF(self.norm_x(self.matrix_K(self.Mi)))
 
     def M(self):
