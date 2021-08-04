@@ -78,9 +78,9 @@ def FDM_time(timegrid, Xi, uh):
 # print(X0)
 #sol = FDM_time(timegrid, X0, uh)
 #print(sol)
-p = uh.lap_q
+p = uh.grad_q
 Mi = uh.Mi
-print(p(Mi[:,0], 2))
+print(p(Mi[:,0], Mi[:,1], 2))
 # print(X0[0,:].reshape(1,-1))
 # print(0.01*Fm(X0, uh))
 # df = pd.DataFrame(np.hstack((uh.Mi, X0)), columns=['x', 'y', 'u', 'v'])
