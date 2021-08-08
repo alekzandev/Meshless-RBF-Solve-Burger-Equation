@@ -35,7 +35,7 @@ def Fm(X0, uh):
 #     #[1/6, 1],
 #     #[1/4, 0]
 # ])
-nf = 2
+nf = 20
 r = HaltonPoints(2, nf).haltonPoints()
 fxl = r.copy()
 fxl[:, 0] = 0
@@ -52,9 +52,9 @@ poly_b = np.array([[-1, -1, 1], [1/2, 3/2, -1], [3/2, 1/8, -3/8]])
 npnts = 3
 t0, te = 0, 1.
 N = 100
-timegrid = np.linspace(0, 1)#np.linspace(t0,te, N)
+timegrid = np.linspace(0, 1, 1000)#np.linspace(t0,te, N)
 
-uh = assembled_matrix(Mb=Mb, npnts=npnts, poly_b=poly_b)
+uh = assembled_matrix(Mb=Mb, npnts=npnts, poly_b=poly_b, rbf='MQ')
 X0 = uh.X_0()
 
 def FDM_time(timegrid, Xi, uh):
@@ -63,6 +63,7 @@ def FDM_time(timegrid, Xi, uh):
         solution[dt] = Xi
         Xi = Xi + dt*Fm(Xi, uh)
     return solution
+
 # print('X0')
 # print(X0)
 # X0 = X0 + 0.01*Fm(X0, uh)
@@ -79,8 +80,10 @@ def FDM_time(timegrid, Xi, uh):
 # print(X0)
 # uh.x = [0.5, 0.333333333]
 # Fm(X0, uh)
-# sol = FDM_time(timegrid, X0, uh)
-# print(sol)
+sol = FDM_time(timegrid, X0, uh)
+for t,s in sol.items():
+    print('Time: {:,.4f}'.format(t))
+    print(s, '\n')
 
 # df = pd.DataFrame(np.hstack((uh.Mi, X0)), columns=['x', 'y', 'u', 'v'])
 
@@ -95,8 +98,6 @@ def FDM_time(timegrid, Xi, uh):
 # q2 = uh.Q2()
 # k1 = uh.K1()
 # q1 = uh.Q1()
-a = uh.A()
-print(np.linalg.inv(a))
 # mq=np.hstack((m, q1))
 # mqt=np.vstack((m.T, q1.T))
 # mult1 = np.matmul()

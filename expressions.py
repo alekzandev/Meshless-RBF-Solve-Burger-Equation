@@ -35,9 +35,13 @@ class terms_uh(object):
         self.l = l
 
     def RBF(self, M):
+        '''
+        RBF
+        '''
         if self.rbf == 'TPS':
             return (-1)**(self.beta + 1) * M**(2*self.beta) * np.log(M+1e-80)
         elif self.rbf == 'MQ':
+            self.beta = 3/2
             return (-1)**(int(self.beta)+1) * (self.c**2 + M ** 2)**self.beta
         elif self.rbf == 'radial_powers':
             return (-1)**int(self.beta/2) * self.norm_x(M)**self.beta
@@ -123,11 +127,6 @@ class terms_uh(object):
     def gamma_m(self, phi_m):
         self.op = "gamma"
         if phi_m == self.laplacian_TPS or phi_m == self.RBF:
-            # M = self.matrix_lamb_gamm_thet(self.Mb)
-            # M_norm = self.norm_x(M).reshape(-1,1)
-            # # print (" M={} \n M_norm={}".format(M.shape, M_norm.shape))
-            # print(M_norm)
-            # return phi_m(M_norm)
             return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)).reshape(-1, 1))
         elif phi_m == self.grad_TPS:
             return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)))
@@ -209,6 +208,9 @@ class operators(terms_uh):
 
 class assembled_matrix(operators):
     def grad_TPS(self, M):
+        '''
+        RBF gradient
+        '''
         op = self.op
         if self.rbf == 'TPS':
             if op == "lambda":
@@ -227,9 +229,29 @@ class assembled_matrix(operators):
                     (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
             return np.hstack((comp_x, comp_y))
 
+        elif self.rbf == 'MQ':
+            if op == 'lambda':
+                xy = self.matrix_lamb_gamm_thet(self.Mi)
+                comp_x = 3 * \
+                    xy[:, 0].reshape(-1, 1) * np.sqrt(M**2 + 1).reshape(-1,1)
+                comp_y = 3 * \
+                    xy[:, 1].reshape(-1, 1) * np.sqrt(M**2 + 1).reshape(-1,1)
+            elif op == 'gamma':
+                xy = self.matrix_lamb_gamm_thet(self.Mb)
+                comp_x = 3 * \
+                    xy[:, 0].reshape(-1, 1) * np.sqrt(M**2 + 1).reshape(-1,1)
+                comp_y = 3 * \
+                    xy[:, 1].reshape(-1, 1) * np.sqrt(M**2 + 1).reshape(-1,1)
+            return np.hstack((comp_x, comp_y))
+
     def laplacian_TPS(self, M):
+        '''
+        RBF laplacian
+        '''
         if self.rbf == 'TPS':
             return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1))
+        elif self.rbf == 'MQ':
+            return 3 * ((3 * M**2 + 2)/np.sqrt(M**2 + 1))
 
     def X_0(self, alpha=1):
         # c1 = np.sin(self.Mi[:, 0].reshape(-1, 1) +
