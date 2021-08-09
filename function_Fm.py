@@ -1,14 +1,10 @@
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import seaborn as sns
 
 from explicit_RK import *
 from expressions import *
-from halton_points import HaltonPoints
 
 
-def Fm(X0, uh):
+def Fm(t, X0, uh):
     F = []
     for xn in uh.Mi:
         uh.x = xn
@@ -35,34 +31,14 @@ def Fm(X0, uh):
 #     #[1/6, 1],
 #     #[1/4, 0]
 # ])
-nf = 20
-r = HaltonPoints(2, nf).haltonPoints()
-fxl = r.copy()
-fxl[:, 0] = 0
-fxr = r.copy()
-fxr[:, 0] = 1
-fyu = r.copy()
-fyu[:, 1] = 0
-fyd = r.copy()
-fyd[:, 1] = 1
-
-Mb = np.vstack((fxl, fxr, fyu, fyd))
-
-poly_b = np.array([[-1, -1, 1], [1/2, 3/2, -1], [3/2, 1/8, -3/8]])
-npnts = 3
-t0, te = 0, 1.
-N = 100
-timegrid = np.linspace(0, 1, 1000)#np.linspace(t0,te, N)
-
-uh = assembled_matrix(Mb=Mb, npnts=npnts, poly_b=poly_b, rbf='MQ')
-X0 = uh.X_0()
 
 def FDM_time(timegrid, Xi, uh):
     solution = dict()
     for dt in timegrid:
         solution[dt] = Xi
-        Xi = Xi + dt*Fm(Xi, uh)
+        Xi = Xi + dt*Fm(0, Xi, uh)
     return solution
+
 
 # print('X0')
 # print(X0)
@@ -80,10 +56,6 @@ def FDM_time(timegrid, Xi, uh):
 # print(X0)
 # uh.x = [0.5, 0.333333333]
 # Fm(X0, uh)
-sol = FDM_time(timegrid, X0, uh)
-for t,s in sol.items():
-    print('Time: {:,.4f}'.format(t))
-    print(s, '\n')
 
 # df = pd.DataFrame(np.hstack((uh.Mi, X0)), columns=['x', 'y', 'u', 'v'])
 
