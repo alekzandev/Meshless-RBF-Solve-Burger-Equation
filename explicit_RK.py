@@ -1,12 +1,12 @@
 import numpy as np
-import matplotlib.pyplot as plt
+
 
 class explicit_RungeKutta(object):
     def __init__(self, f, u0, t0, te, N, uh):
         self.f = f
         self.u0 = u0
-        self.dt = (te-t0)/(N+2)
-        self.timegrid = np.linspace(t0, te, N+2)
+        self.dt = (te-t0)/N
+        self.timegrid = np.linspace(t0, te, N+1)
         self.uh = uh
 
     def stage2(self, t):
@@ -21,11 +21,11 @@ class explicit_RungeKutta(object):
         return self.u0 + self.dt * self.f(t + self.dt, ub, self.uh)
 
     def stagef(self, t):
-        ii = (self.f(t, self.u0, self.uh)
-                           + 2*self.f(t + self.dt/2, self.stage2(t), self.uh)
-                           + 2*self.f(t + self.dt/2, self.stage3(t), self.uh)
-                           + self.f(t + self.dt, self.stage4(t), self.uh))
-        print(ii)
+        # ii = (self.f(t, self.u0, self.uh)
+        #                    + 2*self.f(t + self.dt/2, self.stage2(t), self.uh)
+        #                    + 2*self.f(t + self.dt/2, self.stage3(t), self.uh)
+        #                    + self.f(t + self.dt, self.stage4(t), self.uh))
+        # print(ii)
         return self.u0\
             + self.dt/6 * (self.f(t, self.u0, self.uh)
                            + 2*self.f(t + self.dt/2, self.stage2(t), self.uh)
@@ -35,7 +35,7 @@ class explicit_RungeKutta(object):
     def step(self):
         u_n = self.u0
         yield u_n
-        #print(self.timegrid)
+        # print(self.timegrid)
         for t in self.timegrid[1:]:
             u_n = self.stagef(t)
             self.u0 = u_n
