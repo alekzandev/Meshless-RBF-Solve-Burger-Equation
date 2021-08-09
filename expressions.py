@@ -254,10 +254,8 @@ class assembled_matrix(operators):
             return 3 * ((3 * M**2 + 2)/np.sqrt(M**2 + 1))
 
     def X_0(self, alpha=1):
-        # c1 = np.sin(self.Mi[:, 0].reshape(-1, 1) +
-        #             self.Mi[:, 1].reshape(-1, 1))
-        # c2 = np.cos(self.Mi[:, 1].reshape(-1, 1) -
-        #             self.Mi[:, 0].reshape(-1, 1))
+        # c1 = np.sin(np.pi * self.Mi[:,0]) * np.cos(np.pi * self.Mi[:,1])
+        # c2 = np.sin(np.pi * self.Mi[:,1]) * np.cos(np.pi * self.Mi[:,0])
         n = np.linalg.norm(self.Mi, axis=-1)
         c1 = self.Mi[:, 0]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
         c2 = self.Mi[:, 1]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
