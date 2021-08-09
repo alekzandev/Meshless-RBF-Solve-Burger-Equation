@@ -80,11 +80,6 @@ target/
 # IPython
 profile_default/
 ipython_config.py
-<<<<<<< HEAD
-*.ipynb
-.nb/
-=======
->>>>>>> 0d51d39ea14e5ea1f55565b2170d33ab2b5a910b
 
 # pyenv
 .python-version
