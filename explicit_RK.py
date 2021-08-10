@@ -21,11 +21,6 @@ class explicit_RungeKutta(object):
         return self.u0 + self.dt * self.f(t + self.dt, ub, self.uh)
 
     def stagef(self, t):
-        # ii = (self.f(t, self.u0, self.uh)
-        #                    + 2*self.f(t + self.dt/2, self.stage2(t), self.uh)
-        #                    + 2*self.f(t + self.dt/2, self.stage3(t), self.uh)
-        #                    + self.f(t + self.dt, self.stage4(t), self.uh))
-        # print(ii)
         return self.u0\
             + self.dt/6 * (self.f(t, self.u0, self.uh)
                            + 2*self.f(t + self.dt/2, self.stage2(t), self.uh)
@@ -36,7 +31,7 @@ class explicit_RungeKutta(object):
         u_n = self.u0
         yield u_n
         # print(self.timegrid)
-        for t in self.timegrid[1:]:
+        for t in self.timegrid:
             u_n = self.stagef(t)
             self.u0 = u_n
             yield u_n

@@ -17,7 +17,7 @@ class terms_uh(object):
     l: norm order (1,2,np.inf)
     '''
 
-    def __init__(self, Mb, npnts, c=1, beta=1, nu=0.1, mu=0.5, poly_b=np.array([1]),  rbf='TPS', l=2):
+    def __init__(self, Mb, npnts, c=1, beta=1, nu=0.1, mu=1., poly_b=np.array([1]),  rbf='TPS', l=2):
         # np.random.seed(9936)
         self.Mb = Mb
         self.nb = Mb.shape[0]
@@ -33,6 +33,7 @@ class terms_uh(object):
         self.mu = mu
         self.rbf = rbf
         self.l = l
+        self.alpha = 1
 
     def RBF(self, M):
         '''
@@ -81,6 +82,20 @@ class terms_uh(object):
 
     def O2(self):
         return np.zeros((self.dm, self.dm))
+
+    def O1(self):
+        return np.zeros((self.dm, self.d))
+
+    def G(self, t):
+        alpha = self.alpha
+        nX = np.linalg.norm(self.Mb, axis=1).reshape(-1, 1)
+        return self.Mb/((t+alpha)+(t+alpha)**2 * np.exp(nX**2/(4*(alpha+t))))
+        # u = (self.Mb[:,0] + self.Mb[:,1] - 2*self.Mb[:,0]*t)/(1-2*t**2)
+        # v = (self.Mb[:,0] - self.Mb[:,1] - 2*self.Mb[:,1]*t)/(1-2*t**2)
+        # return np.hstack((u.reshape(-1,1), v.reshape(-1,1)))
+
+    def G_tilde(self, t):
+        return np.vstack((self.G(t), self.O1()))
 
     def Q2(self):
         col1 = self.poly_basis(self.Mb, 1)
@@ -159,7 +174,13 @@ class terms_uh(object):
 
     def a_m_op(self, lin_op):
         if lin_op == self.laplacian_TPS or lin_op == self.RBF:
-            return np.matmul(self.Sinv(), np.matmul(self.B(), np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))) - self.lambda_m(lin_op))
+            return -np.matmul(
+                self.Sinv(),
+                np.matmul(
+                    self.B(),
+                    np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
+                ) - self.lambda_m(lin_op)
+            )
         elif lin_op == self.grad_TPS:
             return -np.matmul(
                 self.Sinv(),
@@ -167,6 +188,30 @@ class terms_uh(object):
                     self.B(),
                     np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
                 ) - self.lambda_m(lin_op)
+            )
+
+    def b_m_op(self, lin_op):
+        if lin_op == self.laplacian_TPS or lin_op == self.RBF:
+            return np.matmul(
+                self.C(),
+                np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
+            )\
+                - np.matmul(self.B().transpose(),
+                            np.matmul(
+                    self.Sinv(),
+                    self.lambda_m(lin_op)
+                )
+            )
+        elif lin_op == self.grad_TPS:
+            return np.matmul(
+                self.C(),
+                np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
+            )\
+                - np.matmul(self.B().transpose(),
+                            np.matmul(
+                    self.Sinv(),
+                    self.lambda_m(lin_op)
+                )
             )
 
     def a_m(self):
@@ -178,8 +223,14 @@ class terms_uh(object):
     def grad_am(self):
         return self.a_m_op(self.grad_TPS)
 
-    # def b_m(self):
-    #     return np.matmul(self.C(), np.vstack((self.gamma_m(), self.theta_m()))) - np.matmul(self.B().transpose(), np.matmul(self.Sinv(), self.lambda_m()))
+    def b_m(self):
+        return self.b_m_op(self.RBF)
+
+    def lap_bm(self):
+        return self.b_m_op(self.laplacian_TPS)
+
+    def grad_bm(self):
+        return self.b_m_op(self.grad_TPS)
 
 
 class operators(terms_uh):
@@ -233,15 +284,15 @@ class assembled_matrix(operators):
             if op == 'lambda':
                 xy = self.matrix_lamb_gamm_thet(self.Mi)
                 comp_x = 3 * \
-                    xy[:, 0].reshape(-1, 1) * np.sqrt(M**2 + 1).reshape(-1,1)
+                    xy[:, 0].reshape(-1, 1) * np.sqrt(M**2 + 1).reshape(-1, 1)
                 comp_y = 3 * \
-                    xy[:, 1].reshape(-1, 1) * np.sqrt(M**2 + 1).reshape(-1,1)
+                    xy[:, 1].reshape(-1, 1) * np.sqrt(M**2 + 1).reshape(-1, 1)
             elif op == 'gamma':
                 xy = self.matrix_lamb_gamm_thet(self.Mb)
                 comp_x = 3 * \
-                    xy[:, 0].reshape(-1, 1) * np.sqrt(M**2 + 1).reshape(-1,1)
+                    xy[:, 0].reshape(-1, 1) * np.sqrt(M**2 + 1).reshape(-1, 1)
                 comp_y = 3 * \
-                    xy[:, 1].reshape(-1, 1) * np.sqrt(M**2 + 1).reshape(-1,1)
+                    xy[:, 1].reshape(-1, 1) * np.sqrt(M**2 + 1).reshape(-1, 1)
             return np.hstack((comp_x, comp_y))
 
     def laplacian_TPS(self, M):
@@ -253,16 +304,48 @@ class assembled_matrix(operators):
         elif self.rbf == 'MQ':
             return 3 * ((3 * M**2 + 2)/np.sqrt(M**2 + 1))
 
-    def X_0(self, alpha=1):
+    def X_0(self):
+        alpha = self.alpha
         # c1 = np.sin(np.pi * self.Mi[:,0]) * np.cos(np.pi * self.Mi[:,1])
         # c2 = np.sin(np.pi * self.Mi[:,1]) * np.cos(np.pi * self.Mi[:,0])
         n = np.linalg.norm(self.Mi, axis=-1)
         c1 = self.Mi[:, 0]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
         c2 = self.Mi[:, 1]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
+        # c1 = self.Mi[:, 0] + self.Mi[:, 1]
+        # c2 = self.Mi[:, 0] - self.Mi[:, 1]
         return np.hstack((c1.reshape(-1, 1), c2.reshape(-1, 1)))
 
-    def F_m(self, X0):
-        return np.matmul(self.nu * self.lap_am().T - np.matmul(self.mu * self.a_m().T, np.matmul(X0, self.grad_am().T)), X0)
+    def F_m(self, X0, t):
+        # return np.matmul(self.nu * self.lap_am().T - np.matmul(self.mu * self.a_m().T, np.matmul(X0, self.grad_am().T)), X0)
+        return self.nu * (np.matmul(
+            self.lap_am().T,
+            X0
+        )
+            + np.matmul(
+            self.lap_bm().T,
+            self.G_tilde(t)
+        )
+        )\
+            - self.mu * (
+            np.matmul(
+                np.matmul(
+                    self.a_m().T,
+                    X0
+                )
+                + np.matmul(
+                    self.b_m().T,
+                    self.G_tilde(t)
+                ),
+                np.matmul(
+                    self.grad_am().T,
+                    X0
+                )
+                + np.matmul(
+                    self.grad_bm().T,
+                    self.G_tilde(t)
+                )
+            )
+        )
     # def F_m(self, X0):
     #     return np.matmul(self.nu * self.lap_am().T, X0)
 

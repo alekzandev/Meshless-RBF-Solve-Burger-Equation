@@ -8,7 +8,7 @@ def Fm(t, X0, uh):
     F = []
     for xn in uh.Mi:
         uh.x = xn
-        F.append(uh.F_m(X0)[0])
+        F.append(uh.F_m(X0, t)[0])
         break
     return np.vstack(F)
 
@@ -36,7 +36,7 @@ def FDM_time(timegrid, Xi, uh):
     solution = dict()
     for dt in timegrid:
         solution[dt] = Xi
-        Xi = Xi + dt*Fm(0, Xi, uh)
+        Xi = Xi + dt*Fm(dt, Xi, uh)
     return solution
 
 
