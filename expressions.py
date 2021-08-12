@@ -17,7 +17,7 @@ class terms_uh(object):
     l: norm order (1,2,np.inf)
     '''
 
-    def __init__(self, Mb, npnts, c=1, beta=1, nu=0.1, mu=1., poly_b=np.array([1]),  rbf='TPS', l=2):
+    def __init__(self, Mb, npnts, c=1, beta=1, nu=0.1, mu=1., epsilon=4.5, poly_b=np.array([1]),  rbf='TPS', l=2):
         # np.random.seed(9936)
         self.Mb = Mb
         self.nb = Mb.shape[0]
@@ -31,6 +31,7 @@ class terms_uh(object):
         self.c = c
         self.nu = nu
         self.mu = mu
+        self.epsilon = epsilon
         self.rbf = rbf
         self.l = l
         self.alpha = 1
@@ -43,7 +44,7 @@ class terms_uh(object):
             return (-1)**(self.beta + 1) * M**(2*self.beta) * np.log(M+1e-80)
         elif self.rbf == 'MQ':
             self.beta = 3/2
-            return (-1)**(int(self.beta)+1) * (self.c**2 + M ** 2)**self.beta
+            return (-1)**(int(self.beta)+1) * (self.c**2 + self.epsilon**2 * M ** 2)**self.beta
         elif self.rbf == 'radial_powers':
             return (-1)**int(self.beta/2) * self.norm_x(M)**self.beta
         elif self.rbf == 'rbf_ut':
@@ -121,6 +122,12 @@ class terms_uh(object):
         col3 = self.poly_basis(self.Mi, 3)
         # return np.ones((self.ni, self.dm))
         return np.hstack((col1, col2, col3))
+
+    def ACaps(self):
+        r1 = np.hstack((self.K1(), self.M(), self.Q1()))
+        r2 = np.hstack((self.M().T, self.K2(), self.Q2()))
+        r3 = np.hstack((self.Q1().T, self.Q2().T, self.O2()))
+        return np.vstack((r1, r2, r3))
 
     def B(self):
         return np.matmul(np.hstack((self.M(), self.Q1())), np.linalg.inv(self.A()))
@@ -283,16 +290,20 @@ class assembled_matrix(operators):
         elif self.rbf == 'MQ':
             if op == 'lambda':
                 xy = self.matrix_lamb_gamm_thet(self.Mi)
-                comp_x = 3 * \
-                    xy[:, 0].reshape(-1, 1) * np.sqrt(M**2 + 1).reshape(-1, 1)
-                comp_y = 3 * \
-                    xy[:, 1].reshape(-1, 1) * np.sqrt(M**2 + 1).reshape(-1, 1)
+                comp_x = 3 * self.epsilon**2 *\
+                    xy[:, 0].reshape(-1, 1) * np.sqrt(self.epsilon **
+                                                      2 * M**2 + 1).reshape(-1, 1)
+                comp_y = 3 * self.epsilon**2 *\
+                    xy[:, 1].reshape(-1, 1) * np.sqrt(self.epsilon **
+                                                      2 * M**2 + 1).reshape(-1, 1)
             elif op == 'gamma':
                 xy = self.matrix_lamb_gamm_thet(self.Mb)
-                comp_x = 3 * \
-                    xy[:, 0].reshape(-1, 1) * np.sqrt(M**2 + 1).reshape(-1, 1)
-                comp_y = 3 * \
-                    xy[:, 1].reshape(-1, 1) * np.sqrt(M**2 + 1).reshape(-1, 1)
+                comp_x = 3 * self.epsilon**2 *\
+                    xy[:, 0].reshape(-1, 1) * np.sqrt(self.epsilon **
+                                                      2 * M**2 + 1).reshape(-1, 1)
+                comp_y = 3 * self.epsilon**2 *\
+                    xy[:, 1].reshape(-1, 1) * np.sqrt(self.epsilon **
+                                                      2 * M**2 + 1).reshape(-1, 1)
             return np.hstack((comp_x, comp_y))
 
     def laplacian_TPS(self, M):
@@ -302,7 +313,7 @@ class assembled_matrix(operators):
         if self.rbf == 'TPS':
             return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1))
         elif self.rbf == 'MQ':
-            return 3 * ((3 * M**2 + 2)/np.sqrt(M**2 + 1))
+            return 3 * self.epsilon**2 * ((3 * self.epsilon**2 * M**2 + 2)/np.sqrt(self.epsilon**2 * M**2 + 1))
 
     def X_0(self):
         alpha = self.alpha
@@ -371,6 +382,21 @@ class assembled_matrix(operators):
 
     def J(self):
         return self.nu * self.lap_am().T
+
+
+class stabillity(terms_uh):
+    def cond_num(self, A):
+        _, s, __ = np.linalg.svd(A)
+        return max(s)/min(s), np.linalg.det(A)
+
+    def qX(self):
+        M = np.vstack((self.Mi, self.Mb))
+        dists = list()
+        for ii, i in enumerate(M):
+            for jj, j in enumerate(M):
+                if ii != jj:
+                    dists.append(np.linalg.norm(i-j))
+        return 0.5*min(dists)
 
 
 class initial_condition(assembled_matrix):
