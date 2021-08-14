@@ -25,7 +25,8 @@ class terms_uh(object):
         self.x = np.empty((2, ))
         self.poly_b = poly_b
         self.dm = poly_b.shape[0]
-        self.Mi = HaltonPoints(self.d, npnts).haltonPoints()
+        self.npnts = npnts
+        self.Mi = HaltonPoints(self.d, self.npnts).haltonPoints()
         self.ni = self.Mi.shape[0]
         self.beta = beta
         self.c = c
@@ -397,6 +398,9 @@ class stabillity(terms_uh):
                 if ii != jj:
                     dists.append(np.linalg.norm(i-j))
         return 0.5*min(dists)
+
+    def G_q(self):
+        return self.qX()**(self.beta-(self.d-1)/2) * np.exp(-12.76*self.d/self.qX())
 
 
 class initial_condition(assembled_matrix):
