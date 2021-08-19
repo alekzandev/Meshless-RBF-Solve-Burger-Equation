@@ -52,38 +52,57 @@ class terms_uh(object):
             return (-1/self.c**3) * (np.exp(-self.c * self.norm_x(M)) + self.c * self.norm_x(M))
 
     def K2(self):
-        return self.RBF(self.norm_x(self.matrix_K(self.Mb)))
+        return self.RBF(self.norm_x(self.matrix_K(self.Mb))) + np.eye(self.nb)
 
     def q(self, x, y, i):
+        # if i == 1:
+        #     return 2*y
+        # elif i == 2:
+        #     return 4*x*y
+        # elif i == 3:
+        #     return 8*x*y**2 - 4*x
+        
         if i == 1:
-            return 2*y
+            return np.ones(x.shape)
         elif i == 2:
-            return 4*x*y
+            return 2*x
         elif i == 3:
-            return 8*x*y**2 - 4*x
+            return 4*x*y
 
     def lap_q(self, x, i):
+        # if i == 1:
+        #     return 0
+        # elif i == 2:
+        #     return 0
+        # elif i == 3:
+        #     return 16*x
         if i == 1:
             return 0
         elif i == 2:
             return 0
         elif i == 3:
-            return 16*x
+            return 0
 
     def grad_q(self, x, y, i):
+        # if i == 1:
+        #     return np.hstack((0, 2)).reshape(1, -1)
+        # elif i == 2:
+        #     return np.hstack((4 * y, 4 * x)).reshape(1, -1)
+        # elif i == 3:
+        #     return np.hstack((8 * y**2 - 4, 16 * x * y)).reshape(1, -1)
         if i == 1:
-            return np.hstack((0, 2)).reshape(1, -1)
+            return np.hstack((0, 0)).reshape(1, -1)
         elif i == 2:
-            return np.hstack((4 * y, 4 * x)).reshape(1, -1)
+            return np.hstack((2, 0)).reshape(1, -1)
         elif i == 3:
-            return np.hstack((8 * y**2 - 4, 16 * x * y)).reshape(1, -1)
+            return np.hstack((4 * y, 4 * x)).reshape(1, -1)
 
     def poly_basis(self, M, i):
         # return M[:, 0].reshape(-1, 1) * self.poly_b[i, 0] + M[:, 1].reshape(-1, 1) * self.poly_b[i, 1] + self.poly_b[i, 2]
         return self.q(M[:, 0].reshape(-1, 1), M[:, 1].reshape(-1, 1), i)
 
     def O2(self):
-        return np.zeros((self.dm, self.dm))
+        return np.zeros((self.dm, self.dm)) + 0.001*np.eye(self.dm)
 
     def O1(self):
         return np.zeros((self.dm, self.d))
@@ -112,7 +131,7 @@ class terms_uh(object):
         return np.vstack((A1, A2))
 
     def K1(self):
-        return self.RBF(self.norm_x(self.matrix_K(self.Mi)))
+        return self.RBF(self.norm_x(self.matrix_K(self.Mi))) + np.eye(self.ni)
 
     def M(self):
         return self.RBF(self.norm_x(self.matrix_M()))
