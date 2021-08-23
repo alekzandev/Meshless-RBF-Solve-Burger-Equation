@@ -17,7 +17,7 @@ class terms_uh(object):
     l: norm order (1,2,np.inf)
     '''
 
-    def __init__(self, Mb, npnts, c=1, beta=1, nu=0.1, mu=1., epsilon=4.5, poly_b=np.array([1]),  rbf='TPS', l=2):
+    def __init__(self, Mb, npnts, c=1, beta=1, nu=0.1, mu=1., epsilon=1, poly_b=np.array([1]),  rbf='TPS', l=2):
         # np.random.seed(9936)
         self.Mb = Mb
         self.nb = Mb.shape[0]
@@ -56,13 +56,21 @@ class terms_uh(object):
         return np.zeros((self.dm, self.d))
 
     def O2(self):
-        return np.zeros((self.dm, self.dm)) + 0.01*np.eye(self.dm)
+        return np.zeros((self.dm, self.dm)) + 0.001*np.eye(self.dm)
 
     def K1(self):
-        return self.RBF(self.norm_x(self.matrix_K(self.Mi))) + np.eye(self.ni)
+        if self.rbf == 'TPS':
+            self.lambda_K = 1
+        elif self.rbf == 'MQ':
+            self.lambda_K = 0
+        return self.RBF(self.norm_x(self.matrix_K(self.Mi))) + self.lambda_K*np.eye(self.ni)
 
     def K2(self):
-        return self.RBF(self.norm_x(self.matrix_K(self.Mb))) + np.eye(self.nb)
+        if self.rbf == 'TPS':
+            self.lambda_K = 1
+        elif self.rbf == 'MQ':
+            self.lambda_K = 0
+        return self.RBF(self.norm_x(self.matrix_K(self.Mb))) + self.lambda_K*np.eye(self.nb)
 
     def M(self):
         return self.RBF(self.norm_x(self.matrix_M()))
@@ -76,20 +84,20 @@ class terms_uh(object):
         #     return 8*x*y**2 - 4*x
 
         # Hermite grade m-1
-        # if i == 1:
-        #     return np.ones(x.shape)
-        # elif i == 2:
-        #     return 2*x
-        # elif i == 3:
-        #     return 4*x*y
+        if i == 1:
+            return np.ones(x.shape)
+        elif i == 2:
+            return 2*x
+        elif i == 3:
+            return 2*y
 
         # Lagrange grade 1
-        if i == 1:
-            return 1/4 * (1-x) * (1-y)
-        elif i == 2:
-            return 1/4 * (1+x) * (1-y)
-        elif i == 3:
-            return 1/4 * (1+x) * (1+y)
+        # if i == 1:
+        #     return 1/4 * (1-x) * (1-y)
+        # elif i == 2:
+        #     return 1/4 * (1+x) * (1-y)
+        # elif i == 3:
+        #     return 1/4 * (1+x) * (1+y)
 
     def lap_q(self, x, i):
         # if i == 1:
@@ -116,19 +124,19 @@ class terms_uh(object):
         #     return np.hstack((8 * y**2 - 4, 16 * x * y)).reshape(1, -1)
 
         # #Hermite m-1
-        # if i == 1:
-        #     return np.hstack((0, 0)).reshape(1, -1)
-        # elif i == 2:
-        #     return np.hstack((2, 0)).reshape(1, -1)
-        # elif i == 3:
-        #     return np.hstack((4 * y, 4 * x)).reshape(1, -1)
-        # lagrange m-1
         if i == 1:
-            return 1/4 * np.hstack((y-1, x-1))  # .reshape(1, -1)
+            return np.hstack((0, 0)).reshape(1, -1)
         elif i == 2:
-            return 1/4 * np.hstack((1-y, -x-1))  # .reshape(1, -1)
+            return np.hstack((2, 0)).reshape(1, -1)
         elif i == 3:
-            return 1/4 * np.hstack((y+1, x+1))  # .reshape(1, -1)
+            return np.hstack((0, 2)).reshape(1, -1)
+        # lagrange m-1
+        # if i == 1:
+        #     return 1/4 * np.hstack((y-1, x-1))  # .reshape(1, -1)
+        # elif i == 2:
+        #     return 1/4 * np.hstack((1-y, -x-1))  # .reshape(1, -1)
+        # elif i == 3:
+        #     return 1/4 * np.hstack((y+1, x+1))  # .reshape(1, -1)
 
     def poly_basis(self, M, i):
         # return M[:, 0].reshape(-1, 1) * self.poly_b[i, 0] + M[:, 1].reshape(-1, 1) * self.poly_b[i, 1] + self.poly_b[i, 2]
@@ -173,7 +181,7 @@ class terms_uh(object):
     def Sinv(self):
         MQ1 = np.hstack((self.M(), self.Q1()))
         # np.matmul(np.matmul(MQ1, np.linalg.inv(self.A())), MQ1.T))
-        return np.linalg.inv(self.K1() - np.matmul(MQ1, np.matmul(np.linalg.inv(self.A), MQ1.T)))
+        return np.linalg.inv(self.K1() - np.matmul(MQ1, np.matmul(np.linalg.inv(self.A()), MQ1.T)))
 
     def B(self):
         return np.matmul(np.hstack((self.M(), self.Q1())), np.linalg.inv(self.A()))
@@ -304,18 +312,18 @@ class assembled_matrix(operators):
         if self.rbf == 'TPS':
             if op == "lambda":
                 xy = self.matrix_lamb_gamm_thet(self.Mi)
-                comp_x = (M**(2*self.beta-1)) *\
+                comp_x = (-1)**(self.beta + 1) * (M**(2*self.beta-2)) *\
                     xy[:, 0].reshape(-1, 1) *\
                     (2*self.beta*np.log(M+1e-20)+1)
-                comp_y = (M**(2*self.beta-1)) *\
+                comp_y = (-1)**(self.beta + 1) * (M**(2*self.beta-2)) *\
                     xy[:, 1].reshape(-1, 1) *\
                     (2*self.beta*np.log(M+1e-20)+1)
             elif op == "gamma":
                 xy = self.matrix_lamb_gamm_thet(self.Mb)
-                comp_x = (M**(2*self.beta-1)) *\
+                comp_x = (-1)**(self.beta + 1) * (M**(2*self.beta-2)) *\
                     xy[:, 0].reshape(-1, 1) *\
                     (2*self.beta*np.log(M+1e-20)+1)
-                comp_y = (M**(2*self.beta-1)) *\
+                comp_y = (-1)**(self.beta + 1) * (M**(2*self.beta-2)) *\
                     xy[:, 1].reshape(-1, 1) *\
                     (2*self.beta*np.log(M+1e-20)+1)
             return np.hstack((comp_x, comp_y))
@@ -344,7 +352,7 @@ class assembled_matrix(operators):
         RBF laplacian
         '''
         if self.rbf == 'TPS':
-            return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1))
+            return (-1)**(self.beta + 1) * M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1))
         elif self.rbf == 'MQ':
             return 3 * self.epsilon**2 * ((3 * self.epsilon**2 * M**2 + 2)/np.sqrt(self.epsilon**2 * M**2 + 1))
 
