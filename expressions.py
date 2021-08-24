@@ -180,11 +180,16 @@ class terms_uh(object):
 
     def Sinv(self):
         MQ1 = np.hstack((self.M(), self.Q1()))
+        MQ1T = np.vstack((self.M().T, self.Q1().T))
+        Ainv = np.linalg.inv(self.A())
+        S = self.K1() - np.matmul(MQ1, np.matmul(Ainv, MQ1T))
         # np.matmul(np.matmul(MQ1, np.linalg.inv(self.A())), MQ1.T))
-        return np.linalg.inv(self.K1() - np.matmul(MQ1, np.matmul(np.linalg.inv(self.A()), MQ1.T)))
+        return np.linalg.inv(S)
 
     def B(self):
-        return np.matmul(np.hstack((self.M(), self.Q1())), np.linalg.inv(self.A()))
+        MQ1 = np.hstack((self.M(), self.Q1()))
+        Ainv = np.linalg.inv(self.A())
+        return np.matmul(MQ1, Ainv)
 
     def C(self):
         # np.matmul(np.matmul(self.B().transpose(), self.Sinv()), self.B())
@@ -192,17 +197,17 @@ class terms_uh(object):
 
     def lambda_m(self, phi_m):
         self.op = "lambda"
-        if phi_m == self.laplacian_TPS or phi_m == self.RBF:
-            return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi)).reshape(-1, 1))
-        elif phi_m == self.grad_TPS:
-            return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi)).reshape(-1, 1))
+        # if phi_m == self.laplacian_TPS or phi_m == self.RBF:
+        return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi)).reshape(-1, 1))
+        # elif phi_m == self.grad_TPS:
+        #     return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi)).reshape(-1, 1))
 
     def gamma_m(self, phi_m):
         self.op = "gamma"
-        if phi_m == self.laplacian_TPS or phi_m == self.RBF:
-            return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)).reshape(-1, 1))
-        elif phi_m == self.grad_TPS:
-            return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)).reshape(-1, 1))
+        # if phi_m == self.laplacian_TPS or phi_m == self.RBF:
+        return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)).reshape(-1, 1))
+        # elif phi_m == self.grad_TPS:
+        #     return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)).reshape(-1, 1))
 
     def theta_m(self, phi_m):
         if phi_m == self.RBF:
@@ -231,34 +236,16 @@ class terms_uh(object):
         # return np.ones((self.dm, 1))
 
     def a_m_op(self, lin_op):
-        # if lin_op == self.laplacian_TPS or lin_op == self.RBF:
-        return -np.matmul(
-            self.Sinv(),
-            np.matmul(
-                self.B(),
-                np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op))))
-            - self.lambda_m(lin_op))
-        # elif lin_op == self.grad_TPS:
-        #     return -np.matmul(
-        #         self.Sinv(),
-        #         np.matmul(
-        #             self.B(),
-        #             np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op))))
-        #         - self.lambda_m(lin_op))
+        gam_thet = np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
+        term_par = np.matmul(self.B(), gam_thet) - self.lambda_m(lin_op)
+        return - np.matmul(self.Sinv(), term_par)
 
     def b_m_op(self, lin_op):
-        # if lin_op == self.laplacian_TPS or lin_op == self.RBF:
-        return np.matmul(
-            self.C(),
-            np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op))))\
-            - np.matmul(self.B().T,
-                        np.matmul(self.Sinv(), self.lambda_m(lin_op)))
-        # elif lin_op == self.grad_TPS:
-        #     return np.matmul(
-        #         self.C(),
-        #         np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op))))\
-        #         - np.matmul(self.B().transpose(),
-        #                     np.matmul(self.Sinv(), self.lambda_m(lin_op)))
+        gam_thet = np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
+        fterm = np.matmul(self.C(), gam_thet)
+        sterm = np.matmul(self.B().T, np.matmul(
+            self.Sinv(), self.lambda_m(lin_op)))
+        return fterm - sterm
 
     def a_m(self):
         return self.a_m_op(self.RBF)
@@ -360,7 +347,8 @@ class assembled_matrix(operators):
         alpha = self.alpha
         # c1 = np.sin(np.pi * self.Mi[:,0]) * np.cos(np.pi * self.Mi[:,1])
         # c2 = np.sin(np.pi * self.Mi[:,1]) * np.cos(np.pi * self.Mi[:,0])
-        n = np.linalg.norm(self.Mi, axis=-1)
+        #n = np.linalg.norm(self.Mi, axis=-1)
+        n = self.norm_x(self.Mi)
         c1 = self.Mi[:, 0]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
         c2 = self.Mi[:, 1]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
         # c1 = self.Mi[:, 0] + self.Mi[:, 1]
@@ -368,14 +356,15 @@ class assembled_matrix(operators):
         return np.hstack((c1.reshape(-1, 1), c2.reshape(-1, 1)))
 
     def F_m(self, X0, t):
-        # return np.matmul(self.nu * self.lap_am().T - np.matmul(self.mu * self.a_m().T, np.matmul(X0, self.grad_am().T)), X0)
-        return self.nu * (np.matmul(self.lap_am().T, X0)
-                          + np.matmul(self.lap_bm().T, self.G_tilde(t)))\
-            - self.mu * (np.matmul(
-                np.matmul(self.a_m().T, X0)
-                + np.matmul(self.b_m().T, self.G_tilde(t)),
-                np.matmul(self.grad_am().T, X0)
-                + np.matmul(self.grad_bm().T, self.G_tilde(t))))
+        dissipation_term = self.nu * \
+            (np.matmul(self.lap_am().T, X0) +
+             np.matmul(self.lap_bm().T, self.G_tilde(t)))
+        advection_term1 = np.matmul(
+            self.a_m().T, X0) + np.matmul(self.b_m().T, self.G_tilde(t))
+        advection_term2 = np.matmul(
+            self.grad_am().T, X0) + np.matmul(self.grad_bm().T, self.G_tilde(t))
+        advection_term = self.mu * np.matmul(advection_term1, advection_term2)
+        return dissipation_term - advection_term
     # def F_m(self, X0):
     #     return np.matmul(self.nu * self.lap_am().T, X0)
 
