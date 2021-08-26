@@ -6,10 +6,9 @@ from expressions import *
 
 def Fm(t, X0, uh):
     F = []
-    for xn in uh.Mi:
+    for i, xn in enumerate(uh.Mi):
         uh.x = xn
-        F.append(uh.F_m(X0, t)[0])
-        break
+        F.append(uh.F_m(X0, t, i)[0])
     return np.vstack(F)
 
 # Mb = np.array([
@@ -31,6 +30,7 @@ def Fm(t, X0, uh):
 #     #[1/6, 1],
 #     #[1/4, 0]
 # ])
+
 
 def FDM_time(timegrid, Xi, uh):
     solution = dict()

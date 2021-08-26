@@ -31,7 +31,7 @@ class explicit_RungeKutta(object):
         u_n = self.u0
         yield u_n
         # print(self.timegrid)
-        for t in self.timegrid:
+        for t in self.timegrid[1:]:
             u_n = self.stagef(t)
             self.u0 = u_n
             yield u_n

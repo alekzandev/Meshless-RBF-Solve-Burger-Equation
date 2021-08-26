@@ -355,12 +355,15 @@ class assembled_matrix(operators):
         # c2 = self.Mi[:, 0] - self.Mi[:, 1]
         return np.hstack((c1.reshape(-1, 1), c2.reshape(-1, 1)))
 
-    def F_m(self, X0, t):
+    def F_m(self, X0, t, i=0):
         dissipation_term = self.nu * \
             (np.matmul(self.lap_am().T, X0) +
              np.matmul(self.lap_bm().T, self.G_tilde(t)))
-        advection_term1 = np.matmul(
-            self.a_m().T, X0) + np.matmul(self.b_m().T, self.G_tilde(t))
+        # advection_term1 = np.matmul(
+        #     self.a_m().T, X0) + np.matmul(self.b_m().T, self.G_tilde(t))
+        ei = np.zeros((self.ni, 1))
+        ei[int(i)] = 1
+        advection_term1 = np.matmul(ei.T, X0)
         advection_term2 = np.matmul(
             self.grad_am().T, X0) + np.matmul(self.grad_bm().T, self.G_tilde(t))
         advection_term = self.mu * np.matmul(advection_term1, advection_term2)
