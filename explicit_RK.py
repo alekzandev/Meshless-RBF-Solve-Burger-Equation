@@ -34,6 +34,7 @@ class explicit_RungeKutta(object):
         for t in self.timegrid[1:]:
             u_n = self.stagef(t)
             self.u0 = u_n
+            print("t={}".format(t))
             yield u_n
 
     def solve(self):

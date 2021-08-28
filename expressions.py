@@ -37,20 +37,23 @@ class terms_uh(object):
         self.l = l
         self.alpha = 1
 
+    def drop_to_zero(self, M, tol=1e-5):
+        return np.where(abs(M) < tol, 0, M)
+
     def RBF(self, M):
         '''
         RBF
         '''
         if self.rbf == 'TPS':
             self.beta = 1
-            return (-1)**(self.beta + 1) * M**(2*self.beta) * np.log(M+1e-80)
+            return self.drop_to_zero((-1)**(self.beta + 1) * M**(2*self.beta) * np.log(M+1e-80))
         elif self.rbf == 'MQ':
             self.beta = 3/2
-            return (-1)**(int(self.beta)+1) * (self.c**2 + self.epsilon**2 * M ** 2)**self.beta
+            return self.drop_to_zero((-1)**(int(self.beta)+1) * (self.c**2 + self.epsilon**2 * M ** 2)**self.beta)
         elif self.rbf == 'radial_powers':
-            return (-1)**int(self.beta/2) * self.norm_x(M)**self.beta
+            return self.drop_to_zero((-1)**int(self.beta/2) * self.norm_x(M)**self.beta)
         elif self.rbf == 'rbf_ut':
-            return (-1/self.c**3) * (np.exp(-self.c * self.norm_x(M)) + self.c * self.norm_x(M))
+            return self.drop_to_zero((-1/self.c**3) * (np.exp(-self.c * self.norm_x(M)) + self.c * self.norm_x(M)))
 
     def O1(self):
         return np.zeros((self.dm, self.d))
@@ -192,22 +195,15 @@ class terms_uh(object):
         return np.matmul(MQ1, Ainv)
 
     def C(self):
-        # np.matmul(np.matmul(self.B().transpose(), self.Sinv()), self.B())
         return np.linalg.inv(self.A()) + np.matmul(self.B().T, np.matmul(self.Sinv(), self.B()))
 
     def lambda_m(self, phi_m):
         self.op = "lambda"
-        # if phi_m == self.laplacian_TPS or phi_m == self.RBF:
         return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi)).reshape(-1, 1))
-        # elif phi_m == self.grad_TPS:
-        #     return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi)).reshape(-1, 1))
 
     def gamma_m(self, phi_m):
         self.op = "gamma"
-        # if phi_m == self.laplacian_TPS or phi_m == self.RBF:
         return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)).reshape(-1, 1))
-        # elif phi_m == self.grad_TPS:
-        #     return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)).reshape(-1, 1))
 
     def theta_m(self, phi_m):
         if phi_m == self.RBF:
@@ -313,7 +309,8 @@ class assembled_matrix(operators):
                 comp_y = (-1)**(self.beta + 1) * (M**(2*self.beta-2)) *\
                     xy[:, 1].reshape(-1, 1) *\
                     (2*self.beta*np.log(M+1e-20)+1)
-            return np.hstack((comp_x, comp_y))
+            # return np.hstack((comp_x, comp_y))
+            return self.drop_to_zero(np.hstack((comp_x, comp_y)))
 
         elif self.rbf == 'MQ':
             if op == 'lambda':
@@ -332,16 +329,19 @@ class assembled_matrix(operators):
                 comp_y = 3 * self.epsilon**2 *\
                     xy[:, 1].reshape(-1, 1) * np.sqrt(self.epsilon **
                                                       2 * M**2 + 1)  # .reshape(-1, 1)
-            return np.hstack((comp_x, comp_y))
+            # return np.hstack((comp_x, comp_y))
+            return self.drop_to_zero(np.hstack((comp_x, comp_y)))
 
     def laplacian_TPS(self, M):
         '''
         RBF laplacian
         '''
         if self.rbf == 'TPS':
-            return (-1)**(self.beta + 1) * M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1))
+            # return (-1)**(self.beta + 1) * M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1))
+            return self.drop_to_zero((-1)**(self.beta + 1) * M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1)))
         elif self.rbf == 'MQ':
-            return 3 * self.epsilon**2 * ((3 * self.epsilon**2 * M**2 + 2)/np.sqrt(self.epsilon**2 * M**2 + 1))
+            # return 3 * self.epsilon**2 * ((3 * self.epsilon**2 * M**2 + 2)/np.sqrt(self.epsilon**2 * M**2 + 1))
+            return self.drop_to_zero(3 * self.epsilon**2 * ((3 * self.epsilon**2 * M**2 + 2)/np.sqrt(self.epsilon**2 * M**2 + 1)))
 
     def X_0(self):
         alpha = self.alpha
