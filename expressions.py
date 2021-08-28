@@ -17,7 +17,7 @@ class terms_uh(object):
     l: norm order (1,2,np.inf)
     '''
 
-    def __init__(self, Mb, npnts, c=1, beta=1, nu=0.1, mu=1., epsilon=4.5, poly_b=np.array([1]),  rbf='TPS', l=2):
+    def __init__(self, Mb, npnts, c=1, beta=1, nu=0.1, mu=1., epsilon=1, poly_b=np.array([1]),  rbf='TPS', l=2):
         # np.random.seed(9936)
         self.Mb = Mb
         self.nb = Mb.shape[0]
@@ -25,7 +25,8 @@ class terms_uh(object):
         self.x = np.empty((2, ))
         self.poly_b = poly_b
         self.dm = poly_b.shape[0]
-        self.Mi = HaltonPoints(self.d, npnts).haltonPoints()
+        self.npnts = npnts
+        self.Mi = HaltonPoints(self.d, self.npnts).haltonPoints()
         self.ni = self.Mi.shape[0]
         self.beta = beta
         self.c = c
@@ -36,85 +37,113 @@ class terms_uh(object):
         self.l = l
         self.alpha = 1
 
+    def drop_to_zero(self, M, tol=1e-5):
+        return np.where(abs(M) < tol, 0, M)
+
     def RBF(self, M):
         '''
         RBF
         '''
         if self.rbf == 'TPS':
-            return (-1)**(self.beta + 1) * M**(2*self.beta) * np.log(M+1e-80)
+            self.beta = 1
+            return self.drop_to_zero((-1)**(self.beta + 1) * M**(2*self.beta) * np.log(M+1e-80))
         elif self.rbf == 'MQ':
             self.beta = 3/2
-            return (-1)**(int(self.beta)+1) * (self.c**2 + self.epsilon**2 * M ** 2)**self.beta
+            return self.drop_to_zero((-1)**(int(self.beta)+1) * (self.c**2 + self.epsilon**2 * M ** 2)**self.beta)
         elif self.rbf == 'radial_powers':
-            return (-1)**int(self.beta/2) * self.norm_x(M)**self.beta
+            return self.drop_to_zero((-1)**int(self.beta/2) * self.norm_x(M)**self.beta)
         elif self.rbf == 'rbf_ut':
-            return (-1/self.c**3) * (np.exp(-self.c * self.norm_x(M)) + self.c * self.norm_x(M))
-
-    def K2(self):
-        return self.RBF(self.norm_x(self.matrix_K(self.Mb)))
-
-    def q(self, x, y, i):
-        if i == 1:
-            return 2*y
-        elif i == 2:
-            return 4*x*y
-        elif i == 3:
-            return 8*x*y**2 - 4*x
-
-    def lap_q(self, x, i):
-        if i == 1:
-            return 0
-        elif i == 2:
-            return 0
-        elif i == 3:
-            return 16*x
-
-    def grad_q(self, x, y, i):
-        if i == 1:
-            return np.hstack((0, 2)).reshape(1, -1)
-        elif i == 2:
-            return np.hstack((4 * y, 4 * x)).reshape(1, -1)
-        elif i == 3:
-            return np.hstack((8 * y**2 - 4, 16 * x * y)).reshape(1, -1)
-
-    def poly_basis(self, M, i):
-        # return M[:, 0].reshape(-1, 1) * self.poly_b[i, 0] + M[:, 1].reshape(-1, 1) * self.poly_b[i, 1] + self.poly_b[i, 2]
-        return self.q(M[:, 0].reshape(-1, 1), M[:, 1].reshape(-1, 1), i)
-
-    def O2(self):
-        return np.zeros((self.dm, self.dm))
+            return self.drop_to_zero((-1/self.c**3) * (np.exp(-self.c * self.norm_x(M)) + self.c * self.norm_x(M)))
 
     def O1(self):
         return np.zeros((self.dm, self.d))
 
-    def G(self, t):
-        alpha = self.alpha
-        nX = np.linalg.norm(self.Mb, axis=1).reshape(-1, 1)
-        return self.Mb/((t+alpha)+(t+alpha)**2 * np.exp(nX**2/(4*(alpha+t))))
-        # u = (self.Mb[:,0] + self.Mb[:,1] - 2*self.Mb[:,0]*t)/(1-2*t**2)
-        # v = (self.Mb[:,0] - self.Mb[:,1] - 2*self.Mb[:,1]*t)/(1-2*t**2)
-        # return np.hstack((u.reshape(-1,1), v.reshape(-1,1)))
-
-    def G_tilde(self, t):
-        return np.vstack((self.G(t), self.O1()))
-
-    def Q2(self):
-        col1 = self.poly_basis(self.Mb, 1)
-        col2 = self.poly_basis(self.Mb, 2)
-        col3 = self.poly_basis(self.Mb, 3)
-        # return np.ones((self.nb, self.dm))  # .reshape(-1, 1)
-        return np.hstack((col1, col2, col3))
-
-    def A(self):
-        A1 = np.hstack((self.K2(), self.Q2()))
-        A2 = np.hstack((self.Q2().transpose(), self.O2()))
-        return np.vstack((A1, A2))
+    def O2(self):
+        return np.zeros((self.dm, self.dm)) + 0.001*np.eye(self.dm)
 
     def K1(self):
-        return self.RBF(self.norm_x(self.matrix_K(self.Mi)))
+        if self.rbf == 'TPS':
+            self.lambda_K = 1
+        elif self.rbf == 'MQ':
+            self.lambda_K = 0
+        return self.RBF(self.norm_x(self.matrix_K(self.Mi))) + self.lambda_K*np.eye(self.ni)
+
+    def K2(self):
+        if self.rbf == 'TPS':
+            self.lambda_K = 1
+        elif self.rbf == 'MQ':
+            self.lambda_K = 0
+        return self.RBF(self.norm_x(self.matrix_K(self.Mb))) + self.lambda_K*np.eye(self.nb)
 
     def M(self):
         return self.RBF(self.norm_x(self.matrix_M()))
+
+    def q(self, x, y, i):
+        # if i == 1:
+        #     return 2*y
+        # elif i == 2:
+        #     return 4*x*y
+        # elif i == 3:
+        #     return 8*x*y**2 - 4*x
+
+        # Hermite grade m-1
+        if i == 1:
+            return np.ones(x.shape)
+        elif i == 2:
+            return 2*x
+        elif i == 3:
+            return 2*y
+
+        # Lagrange grade 1
+        # if i == 1:
+        #     return 1/4 * (1-x) * (1-y)
+        # elif i == 2:
+        #     return 1/4 * (1+x) * (1-y)
+        # elif i == 3:
+        #     return 1/4 * (1+x) * (1+y)
+
+    def lap_q(self, x, i):
+        # if i == 1:
+        #     return 0
+        # elif i == 2:
+        #     return 0
+        # elif i == 3:
+        #     return 16*x
+
+        #Hermite and lagrange
+        if i == 1:
+            return 0
+        elif i == 2:
+            return 0
+        elif i == 3:
+            return 0
+
+    def grad_q(self, x, y, i):
+        # if i == 1:
+        #     return np.hstack((0, 2)).reshape(1, -1)
+        # elif i == 2:
+        #     return np.hstack((4 * y, 4 * x)).reshape(1, -1)
+        # elif i == 3:
+        #     return np.hstack((8 * y**2 - 4, 16 * x * y)).reshape(1, -1)
+
+        # #Hermite m-1
+        if i == 1:
+            return np.hstack((0, 0)).reshape(1, -1)
+        elif i == 2:
+            return np.hstack((2, 0)).reshape(1, -1)
+        elif i == 3:
+            return np.hstack((0, 2)).reshape(1, -1)
+        # lagrange m-1
+        # if i == 1:
+        #     return 1/4 * np.hstack((y-1, x-1))  # .reshape(1, -1)
+        # elif i == 2:
+        #     return 1/4 * np.hstack((1-y, -x-1))  # .reshape(1, -1)
+        # elif i == 3:
+        #     return 1/4 * np.hstack((y+1, x+1))  # .reshape(1, -1)
+
+    def poly_basis(self, M, i):
+        # return M[:, 0].reshape(-1, 1) * self.poly_b[i, 0] + M[:, 1].reshape(-1, 1) * self.poly_b[i, 1] + self.poly_b[i, 2]
+        return self.q(M[:, 0].reshape(-1, 1), M[:, 1].reshape(-1, 1), i)
 
     def Q1(self):
         col1 = self.poly_basis(self.Mi, 1)
@@ -123,41 +152,64 @@ class terms_uh(object):
         # return np.ones((self.ni, self.dm))
         return np.hstack((col1, col2, col3))
 
+    def Q2(self):
+        col1 = self.poly_basis(self.Mb, 1)
+        col2 = self.poly_basis(self.Mb, 2)
+        col3 = self.poly_basis(self.Mb, 3)
+        # return np.ones((self.nb, self.dm))  # .reshape(-1, 1)
+        return np.hstack((col1, col2, col3))
+
+    def G(self, t):
+        #alpha = self.alpha
+        #nX = np.linalg.norm(self.Mb, axis=1).reshape(-1, 1)
+        return self.Mb/((t+self.alpha)+(t+self.alpha)**2 * np.exp(self.norm_x(self.Mb).reshape(-1, 1) ** 2/(4*(self.alpha+t))))
+        # u = (self.Mb[:,0] + self.Mb[:,1] - 2*self.Mb[:,0]*t)/(1-2*t**2)
+        # v = (self.Mb[:,0] - self.Mb[:,1] - 2*self.Mb[:,1]*t)/(1-2*t**2)
+        # return np.hstack((u.reshape(-1,1), v.reshape(-1,1)))
+
+    def G_tilde(self, t):
+        return np.vstack((self.G(t), self.O1()))
+
+    def A(self):
+        A1 = np.hstack((self.K2(), self.Q2()))
+        A2 = np.hstack((self.Q2().T, self.O2()))
+        return np.vstack((A1, A2))
+
     def ACaps(self):
         r1 = np.hstack((self.K1(), self.M(), self.Q1()))
         r2 = np.hstack((self.M().T, self.K2(), self.Q2()))
         r3 = np.hstack((self.Q1().T, self.Q2().T, self.O2()))
         return np.vstack((r1, r2, r3))
 
-    def B(self):
-        return np.matmul(np.hstack((self.M(), self.Q1())), np.linalg.inv(self.A()))
-
     def Sinv(self):
         MQ1 = np.hstack((self.M(), self.Q1()))
-        return np.linalg.inv(self.K1() - np.matmul(np.matmul(MQ1, np.linalg.inv(self.A())), MQ1.transpose()))
+        MQ1T = np.vstack((self.M().T, self.Q1().T))
+        Ainv = np.linalg.inv(self.A())
+        S = self.K1() - np.matmul(MQ1, np.matmul(Ainv, MQ1T))
+        # np.matmul(np.matmul(MQ1, np.linalg.inv(self.A())), MQ1.T))
+        return np.linalg.inv(S)
+
+    def B(self):
+        MQ1 = np.hstack((self.M(), self.Q1()))
+        Ainv = np.linalg.inv(self.A())
+        return np.matmul(MQ1, Ainv)
 
     def C(self):
-        return np.linalg.inv(self.A()) + np.matmul(np.matmul(self.B().transpose(), self.Sinv()), self.B())
+        return np.linalg.inv(self.A()) + np.matmul(self.B().T, np.matmul(self.Sinv(), self.B()))
 
     def lambda_m(self, phi_m):
         self.op = "lambda"
-        if phi_m == self.laplacian_TPS or phi_m == self.RBF:
-            return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi))).reshape(-1, 1)
-        elif phi_m == self.grad_TPS:
-            return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi)))
+        return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mi)).reshape(-1, 1))
 
     def gamma_m(self, phi_m):
         self.op = "gamma"
-        if phi_m == self.laplacian_TPS or phi_m == self.RBF:
-            return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)).reshape(-1, 1))
-        elif phi_m == self.grad_TPS:
-            return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)))
+        return phi_m(self.norm_x(self.matrix_lamb_gamm_thet(self.Mb)).reshape(-1, 1))
 
     def theta_m(self, phi_m):
         if phi_m == self.RBF:
             row1 = self.q(self.x[0], self.x[1], 1)
             row2 = self.q(self.x[0], self.x[1], 2)
-            row3 = self.q(self.x[0], self.x[1], 2)
+            row3 = self.q(self.x[0], self.x[1], 3)
             return np.vstack((row1, row2, row3))
         elif phi_m == self.laplacian_TPS:
             row1 = self.lap_q(self.x[0], 1)
@@ -180,46 +232,16 @@ class terms_uh(object):
         # return np.ones((self.dm, 1))
 
     def a_m_op(self, lin_op):
-        if lin_op == self.laplacian_TPS or lin_op == self.RBF:
-            return -np.matmul(
-                self.Sinv(),
-                np.matmul(
-                    self.B(),
-                    np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
-                ) - self.lambda_m(lin_op)
-            )
-        elif lin_op == self.grad_TPS:
-            return -np.matmul(
-                self.Sinv(),
-                np.matmul(
-                    self.B(),
-                    np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
-                ) - self.lambda_m(lin_op)
-            )
+        gam_thet = np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
+        term_par = np.matmul(self.B(), gam_thet) - self.lambda_m(lin_op)
+        return - np.matmul(self.Sinv(), term_par)
 
     def b_m_op(self, lin_op):
-        if lin_op == self.laplacian_TPS or lin_op == self.RBF:
-            return np.matmul(
-                self.C(),
-                np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
-            )\
-                - np.matmul(self.B().transpose(),
-                            np.matmul(
-                    self.Sinv(),
-                    self.lambda_m(lin_op)
-                )
-            )
-        elif lin_op == self.grad_TPS:
-            return np.matmul(
-                self.C(),
-                np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
-            )\
-                - np.matmul(self.B().transpose(),
-                            np.matmul(
-                    self.Sinv(),
-                    self.lambda_m(lin_op)
-                )
-            )
+        gam_thet = np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
+        fterm = np.matmul(self.C(), gam_thet)
+        sterm = np.matmul(self.B().T, np.matmul(
+            self.Sinv(), self.lambda_m(lin_op)))
+        return fterm - sterm
 
     def a_m(self):
         return self.a_m_op(self.RBF)
@@ -272,91 +294,80 @@ class assembled_matrix(operators):
         op = self.op
         if self.rbf == 'TPS':
             if op == "lambda":
-                comp_x = (M**(2*self.beta-1)).reshape(-1, 1) *\
-                    self.matrix_lamb_gamm_thet(self.Mi)[:, 0].reshape(-1, 1) *\
-                    (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
-                comp_y = (M**(2*self.beta-1)).reshape(-1, 1) *\
-                    self.matrix_lamb_gamm_thet(self.Mi)[:, 1].reshape(-1, 1) *\
-                    (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
+                xy = self.matrix_lamb_gamm_thet(self.Mi)
+                comp_x = (-1)**(self.beta + 1) * (M**(2*self.beta-2)) *\
+                    xy[:, 0].reshape(-1, 1) *\
+                    (2*self.beta*np.log(M+1e-20)+1)
+                comp_y = (-1)**(self.beta + 1) * (M**(2*self.beta-2)) *\
+                    xy[:, 1].reshape(-1, 1) *\
+                    (2*self.beta*np.log(M+1e-20)+1)
             elif op == "gamma":
-                comp_x = (M**(2*self.beta-1)).reshape(-1, 1) *\
-                    self.matrix_lamb_gamm_thet(self.Mb)[:, 0].reshape(-1, 1) *\
-                    (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
-                comp_y = (M**(2*self.beta-1)).reshape(-1, 1) *\
-                    self.matrix_lamb_gamm_thet(self.Mb)[:, 1].reshape(-1, 1) *\
-                    (2*self.beta*np.log(M+1e-20)+1).reshape(-1, 1)
-            return np.hstack((comp_x, comp_y))
+                xy = self.matrix_lamb_gamm_thet(self.Mb)
+                comp_x = (-1)**(self.beta + 1) * (M**(2*self.beta-2)) *\
+                    xy[:, 0].reshape(-1, 1) *\
+                    (2*self.beta*np.log(M+1e-20)+1)
+                comp_y = (-1)**(self.beta + 1) * (M**(2*self.beta-2)) *\
+                    xy[:, 1].reshape(-1, 1) *\
+                    (2*self.beta*np.log(M+1e-20)+1)
+            # return np.hstack((comp_x, comp_y))
+            return self.drop_to_zero(np.hstack((comp_x, comp_y)))
 
         elif self.rbf == 'MQ':
             if op == 'lambda':
                 xy = self.matrix_lamb_gamm_thet(self.Mi)
                 comp_x = 3 * self.epsilon**2 *\
                     xy[:, 0].reshape(-1, 1) * np.sqrt(self.epsilon **
-                                                      2 * M**2 + 1).reshape(-1, 1)
+                                                      2 * M**2 + 1)  # .reshape(-1, 1)
                 comp_y = 3 * self.epsilon**2 *\
                     xy[:, 1].reshape(-1, 1) * np.sqrt(self.epsilon **
-                                                      2 * M**2 + 1).reshape(-1, 1)
+                                                      2 * M**2 + 1)  # .reshape(-1, 1)
             elif op == 'gamma':
                 xy = self.matrix_lamb_gamm_thet(self.Mb)
                 comp_x = 3 * self.epsilon**2 *\
                     xy[:, 0].reshape(-1, 1) * np.sqrt(self.epsilon **
-                                                      2 * M**2 + 1).reshape(-1, 1)
+                                                      2 * M**2 + 1)  # .reshape(-1, 1)
                 comp_y = 3 * self.epsilon**2 *\
                     xy[:, 1].reshape(-1, 1) * np.sqrt(self.epsilon **
-                                                      2 * M**2 + 1).reshape(-1, 1)
-            return np.hstack((comp_x, comp_y))
+                                                      2 * M**2 + 1)  # .reshape(-1, 1)
+            # return np.hstack((comp_x, comp_y))
+            return self.drop_to_zero(np.hstack((comp_x, comp_y)))
 
     def laplacian_TPS(self, M):
         '''
         RBF laplacian
         '''
         if self.rbf == 'TPS':
-            return M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1))
+            # return (-1)**(self.beta + 1) * M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1))
+            return self.drop_to_zero((-1)**(self.beta + 1) * M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1)))
         elif self.rbf == 'MQ':
-            return 3 * self.epsilon**2 * ((3 * self.epsilon**2 * M**2 + 2)/np.sqrt(self.epsilon**2 * M**2 + 1))
+            # return 3 * self.epsilon**2 * ((3 * self.epsilon**2 * M**2 + 2)/np.sqrt(self.epsilon**2 * M**2 + 1))
+            return self.drop_to_zero(3 * self.epsilon**2 * ((3 * self.epsilon**2 * M**2 + 2)/np.sqrt(self.epsilon**2 * M**2 + 1)))
 
     def X_0(self):
         alpha = self.alpha
         # c1 = np.sin(np.pi * self.Mi[:,0]) * np.cos(np.pi * self.Mi[:,1])
         # c2 = np.sin(np.pi * self.Mi[:,1]) * np.cos(np.pi * self.Mi[:,0])
-        n = np.linalg.norm(self.Mi, axis=-1)
+        #n = np.linalg.norm(self.Mi, axis=-1)
+        n = self.norm_x(self.Mi)
         c1 = self.Mi[:, 0]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
         c2 = self.Mi[:, 1]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
         # c1 = self.Mi[:, 0] + self.Mi[:, 1]
         # c2 = self.Mi[:, 0] - self.Mi[:, 1]
         return np.hstack((c1.reshape(-1, 1), c2.reshape(-1, 1)))
 
-    def F_m(self, X0, t):
-        # return np.matmul(self.nu * self.lap_am().T - np.matmul(self.mu * self.a_m().T, np.matmul(X0, self.grad_am().T)), X0)
-        return self.nu * (np.matmul(
-            self.lap_am().T,
-            X0
-        )
-            + np.matmul(
-            self.lap_bm().T,
-            self.G_tilde(t)
-        )
-        )\
-            - self.mu * (
-            np.matmul(
-                np.matmul(
-                    self.a_m().T,
-                    X0
-                )
-                + np.matmul(
-                    self.b_m().T,
-                    self.G_tilde(t)
-                ),
-                np.matmul(
-                    self.grad_am().T,
-                    X0
-                )
-                + np.matmul(
-                    self.grad_bm().T,
-                    self.G_tilde(t)
-                )
-            )
-        )
+    def F_m(self, X0, t, i=0):
+        dissipation_term = self.nu * \
+            (np.matmul(self.lap_am().T, X0) +
+             np.matmul(self.lap_bm().T, self.G_tilde(t)))
+        # advection_term1 = np.matmul(
+        #     self.a_m().T, X0) + np.matmul(self.b_m().T, self.G_tilde(t))
+        ei = np.zeros((self.ni, 1))
+        ei[int(i)] = 1
+        advection_term1 = np.matmul(ei.T, X0)
+        advection_term2 = np.matmul(
+            self.grad_am().T, X0) + np.matmul(self.grad_bm().T, self.G_tilde(t))
+        advection_term = self.mu * np.matmul(advection_term1, advection_term2)
+        return dissipation_term - advection_term
     # def F_m(self, X0):
     #     return np.matmul(self.nu * self.lap_am().T, X0)
 
@@ -397,6 +408,9 @@ class stabillity(terms_uh):
                 if ii != jj:
                     dists.append(np.linalg.norm(i-j))
         return 0.5*min(dists)
+
+    def G_q(self):
+        return self.qX()**(self.beta-(self.d-1)/2) * np.exp(-12.76*self.d/self.qX())
 
 
 class initial_condition(assembled_matrix):
