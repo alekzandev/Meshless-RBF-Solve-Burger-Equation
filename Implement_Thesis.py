@@ -46,7 +46,7 @@ class RungeKutta_implicit(Onestepmethod):
         '''
         M = 10
         stageDer = np.array(self.s*[self.f(ti, yi)])  # Initial value Y'_0
-        print(stageDer)
+        #print(stageDer)
         #J = nd.Jacobian(self.f)([t0, y0[0]])
         # J = nd.Jacobian(self.f, t0, y0)
 
@@ -77,7 +77,6 @@ class RungeKutta_implicit(Onestepmethod):
         ______________
         The stage derivative Y'_i               
         '''
-        print(initVal)
         JJ = np.eye(self.s * self.dm) - self.h * np.kron(self.A, J)
         luFactor = lu_factor(JJ)
 
