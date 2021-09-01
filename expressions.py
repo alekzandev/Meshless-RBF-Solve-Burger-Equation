@@ -17,7 +17,7 @@ class terms_uh(object):
     l: norm order (1,2,np.inf)
     '''
 
-    def __init__(self, Mb, npnts, c=1, beta=1, nu=0.1, mu=1., epsilon=1, poly_b=np.array([1]),  rbf='TPS', l=2):
+    def __init__(self, Mb, npnts, c=1, beta=1, nu=1, mu=1., epsilon=1, poly_b=np.array([1]),  rbf='TPS', l=2):
         # np.random.seed(9936)
         self.Mb = Mb
         self.nb = Mb.shape[0]
@@ -345,22 +345,15 @@ class assembled_matrix(operators):
 
     def X_0(self):
         alpha = self.alpha
-        # c1 = np.sin(np.pi * self.Mi[:,0]) * np.cos(np.pi * self.Mi[:,1])
-        # c2 = np.sin(np.pi * self.Mi[:,1]) * np.cos(np.pi * self.Mi[:,0])
-        #n = np.linalg.norm(self.Mi, axis=-1)
         n = self.norm_x(self.Mi)
         c1 = self.Mi[:, 0]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
         c2 = self.Mi[:, 1]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
-        # c1 = self.Mi[:, 0] + self.Mi[:, 1]
-        # c2 = self.Mi[:, 0] - self.Mi[:, 1]
         return np.hstack((c1.reshape(-1, 1), c2.reshape(-1, 1)))
 
     def F_m(self, X0, t, i=0):
         dissipation_term = self.nu * \
             (np.matmul(self.lap_am().T, X0) +
              np.matmul(self.lap_bm().T, self.G_tilde(t)))
-        # advection_term1 = np.matmul(
-        #     self.a_m().T, X0) + np.matmul(self.b_m().T, self.G_tilde(t))
         ei = np.zeros((self.ni, 1))
         ei[int(i)] = 1
         advection_term1 = np.matmul(ei.T, X0)
@@ -368,31 +361,6 @@ class assembled_matrix(operators):
             self.grad_am().T, X0) + np.matmul(self.grad_bm().T, self.G_tilde(t))
         advection_term = self.mu * np.matmul(advection_term1, advection_term2)
         return dissipation_term - advection_term
-    # def F_m(self, X0):
-    #     return np.matmul(self.nu * self.lap_am().T, X0)
-
-    def F0(self):
-        for x in self.Mi:
-            yield self.F_m(self.X_0, x)
-    # def J(self, X0):
-    #     return np.matmul(
-    #         self.nu * self.lap_am().T -
-    #         np.matmul(
-    #             self.a_m().T,
-    #             np.matmul(
-    #                 X0,
-    #                 self.grad_am().T)),
-    #         np.ones((self.ni, self.d))) - \
-    #         np.matmul(
-    #         np.matmul(
-    #             self.a_m().T,
-    #             np.matmul(
-    #                 np.ones((self.ni, self.d)),
-    #                 self.grad_am().T)),
-    #         X0)
-
-    def J(self):
-        return self.nu * self.lap_am().T
 
 
 class stabillity(terms_uh):
@@ -411,14 +379,6 @@ class stabillity(terms_uh):
 
     def G_q(self):
         return self.qX()**(self.beta-(self.d-1)/2) * np.exp(-12.76*self.d/self.qX())
-
-
-class initial_condition(assembled_matrix):
-    def F0(self):
-        for x in self.Mi:
-            assem_matrix = self.assembled_matrix(x=x)
-            X0 = assem_matrix.X_0()
-            yield assem_matrix.F_m(X0)[0]
 
 
 class exact_solution(object):
