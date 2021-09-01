@@ -79,13 +79,6 @@ class terms_uh(object):
         return self.RBF(self.norm_x(self.matrix_M()))
 
     def q(self, x, y, i):
-        # if i == 1:
-        #     return 2*y
-        # elif i == 2:
-        #     return 4*x*y
-        # elif i == 3:
-        #     return 8*x*y**2 - 4*x
-
         # Hermite grade m-1
         if i == 1:
             return np.ones(x.shape)
@@ -94,22 +87,7 @@ class terms_uh(object):
         elif i == 3:
             return 2*y
 
-        # Lagrange grade 1
-        # if i == 1:
-        #     return 1/4 * (1-x) * (1-y)
-        # elif i == 2:
-        #     return 1/4 * (1+x) * (1-y)
-        # elif i == 3:
-        #     return 1/4 * (1+x) * (1+y)
-
     def lap_q(self, x, i):
-        # if i == 1:
-        #     return 0
-        # elif i == 2:
-        #     return 0
-        # elif i == 3:
-        #     return 16*x
-
         #Hermite and lagrange
         if i == 1:
             return 0
@@ -119,13 +97,6 @@ class terms_uh(object):
             return 0
 
     def grad_q(self, x, y, i):
-        # if i == 1:
-        #     return np.hstack((0, 2)).reshape(1, -1)
-        # elif i == 2:
-        #     return np.hstack((4 * y, 4 * x)).reshape(1, -1)
-        # elif i == 3:
-        #     return np.hstack((8 * y**2 - 4, 16 * x * y)).reshape(1, -1)
-
         # #Hermite m-1
         if i == 1:
             return np.hstack((0, 0)).reshape(1, -1)
@@ -133,39 +104,24 @@ class terms_uh(object):
             return np.hstack((2, 0)).reshape(1, -1)
         elif i == 3:
             return np.hstack((0, 2)).reshape(1, -1)
-        # lagrange m-1
-        # if i == 1:
-        #     return 1/4 * np.hstack((y-1, x-1))  # .reshape(1, -1)
-        # elif i == 2:
-        #     return 1/4 * np.hstack((1-y, -x-1))  # .reshape(1, -1)
-        # elif i == 3:
-        #     return 1/4 * np.hstack((y+1, x+1))  # .reshape(1, -1)
 
     def poly_basis(self, M, i):
-        # return M[:, 0].reshape(-1, 1) * self.poly_b[i, 0] + M[:, 1].reshape(-1, 1) * self.poly_b[i, 1] + self.poly_b[i, 2]
         return self.q(M[:, 0].reshape(-1, 1), M[:, 1].reshape(-1, 1), i)
 
     def Q1(self):
         col1 = self.poly_basis(self.Mi, 1)
         col2 = self.poly_basis(self.Mi, 2)
         col3 = self.poly_basis(self.Mi, 3)
-        # return np.ones((self.ni, self.dm))
         return np.hstack((col1, col2, col3))
 
     def Q2(self):
         col1 = self.poly_basis(self.Mb, 1)
         col2 = self.poly_basis(self.Mb, 2)
         col3 = self.poly_basis(self.Mb, 3)
-        # return np.ones((self.nb, self.dm))  # .reshape(-1, 1)
         return np.hstack((col1, col2, col3))
 
     def G(self, t):
-        #alpha = self.alpha
-        #nX = np.linalg.norm(self.Mb, axis=1).reshape(-1, 1)
         return self.Mb/((t+self.alpha)+(t+self.alpha)**2 * np.exp(self.norm_x(self.Mb).reshape(-1, 1) ** 2/(4*(self.alpha+t))))
-        # u = (self.Mb[:,0] + self.Mb[:,1] - 2*self.Mb[:,0]*t)/(1-2*t**2)
-        # v = (self.Mb[:,0] - self.Mb[:,1] - 2*self.Mb[:,1]*t)/(1-2*t**2)
-        # return np.hstack((u.reshape(-1,1), v.reshape(-1,1)))
 
     def G_tilde(self, t):
         return np.vstack((self.G(t), self.O1()))
@@ -186,7 +142,6 @@ class terms_uh(object):
         MQ1T = np.vstack((self.M().T, self.Q1().T))
         Ainv = np.linalg.inv(self.A())
         S = self.K1() - np.matmul(MQ1, np.matmul(Ainv, MQ1T))
-        # np.matmul(np.matmul(MQ1, np.linalg.inv(self.A())), MQ1.T))
         return np.linalg.inv(S)
 
     def B(self):
@@ -221,15 +176,6 @@ class terms_uh(object):
             row2 = self.grad_q(self.x[0], self.x[1], 2)
             row3 = self.grad_q(self.x[0], self.x[1], 3)
             return np.vstack((row1, row2, row3))
-
-            # row1 = self.x[0] * self.poly_b[0, 0] + self.x[1] * \
-            #     self.poly_b[0, 1] + self.poly_b[0, 2]
-            # row2 = self.x[0] * self.poly_b[1, 0] + self.x[1] * \
-            #     self.poly_b[1, 1] + self.poly_b[1, 2]
-            # row3 = self.x[0] * self.poly_b[2, 0] + self.x[1] * \
-            #     self.poly_b[2, 1] + self.poly_b[2, 2]
-            # return np.vstack((row1, row2, row3))
-        # return np.ones((self.dm, 1))
 
     def a_m_op(self, lin_op):
         gam_thet = np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
@@ -309,7 +255,6 @@ class assembled_matrix(operators):
                 comp_y = (-1)**(self.beta + 1) * (M**(2*self.beta-2)) *\
                     xy[:, 1].reshape(-1, 1) *\
                     (2*self.beta*np.log(M+1e-20)+1)
-            # return np.hstack((comp_x, comp_y))
             return self.drop_to_zero(np.hstack((comp_x, comp_y)))
 
         elif self.rbf == 'MQ':
@@ -329,7 +274,6 @@ class assembled_matrix(operators):
                 comp_y = 3 * self.epsilon**2 *\
                     xy[:, 1].reshape(-1, 1) * np.sqrt(self.epsilon **
                                                       2 * M**2 + 1)  # .reshape(-1, 1)
-            # return np.hstack((comp_x, comp_y))
             return self.drop_to_zero(np.hstack((comp_x, comp_y)))
 
     def laplacian_TPS(self, M):
@@ -337,10 +281,8 @@ class assembled_matrix(operators):
         RBF laplacian
         '''
         if self.rbf == 'TPS':
-            # return (-1)**(self.beta + 1) * M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1))
             return self.drop_to_zero((-1)**(self.beta + 1) * M**(2*self.beta-2) * (4*self.beta*(self.beta*np.log(M+1e-20)+1)))
         elif self.rbf == 'MQ':
-            # return 3 * self.epsilon**2 * ((3 * self.epsilon**2 * M**2 + 2)/np.sqrt(self.epsilon**2 * M**2 + 1))
             return self.drop_to_zero(3 * self.epsilon**2 * ((3 * self.epsilon**2 * M**2 + 2)/np.sqrt(self.epsilon**2 * M**2 + 1)))
 
     def X_0(self):
@@ -379,6 +321,17 @@ class stabillity(terms_uh):
 
     def G_q(self):
         return self.qX()**(self.beta-(self.d-1)/2) * np.exp(-12.76*self.d/self.qX())
+
+
+class inexact_Newthon(assembled_matrix):
+    def vi(self, X, tk):
+        return X.T.dot(self.grad_am()) + self.G_tilde(tk).T.dot(self.grad_am())
+
+    def wi(self, X, i):
+        ei = np.zeros((self.ni, 1))
+        ei[int(i)] = 1
+        return self.grad_am().dot(X.T).dot(ei) - self.nu*self.lap_am()
+
 
 
 class exact_solution(object):
