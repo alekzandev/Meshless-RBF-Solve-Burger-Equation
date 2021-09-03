@@ -323,15 +323,73 @@ class stabillity(terms_uh):
         return self.qX()**(self.beta-(self.d-1)/2) * np.exp(-12.76*self.d/self.qX())
 
 
-class inexact_Newthon(assembled_matrix):
-    def vi(self, X, tk):
-        return X.T.dot(self.grad_am()) + self.G_tilde(tk).T.dot(self.grad_am())
+class solve_matrix(assembled_matrix):
+    def variables(self, Xk, dt, Y):
+        self.Xk = Xk
+        self.dt = dt
+        self.Y = Y
+        self.p = (3 - np.sqrt(3))/6
+        self.A_tab = np.array([[self.p, 0], [1 - 2*self.p, self.p]])
+        self.b_tab = np.array([1/2, 1/2])
+        self.c_tab = np.array([self.p, 1-self.p])
+        self.e = np.ones((2, 1))
+        self.s = len(self.c_tab)
 
-    def wi(self, X, i):
-        ei = np.zeros((self.ni, 1))
-        ei[int(i)] = 1
-        return self.grad_am().dot(X.T).dot(ei) - self.nu*self.lap_am()
+    def build_matrices(self, tk):
+        Y1 = self.Y[:self.ni, :]
+        Y2 = self.Y[self.ni:, :]
+        for i, x in enumerate(self.Mi):
+            self.x = x
+            F1 = self.F_m(Y1, tk + self.c_tab[0]*self.dt, i)
+            F2 = self.F_m(Y2, tk + self.c_tab[1]*self.dt, i)
+            ei = np.zeros((self.ni, 1))
+            ei[i] = 1
+            wi = self.grad_am().dot(self.Xk.T).dot(ei) - self.nu * self.lap_am()
+            Vi_X = self.Xk.T.dot(self.grad_am()) + \
+                self.G_tilde(tk).T.dot(self.grad_bm())
+            B1k = ei.T.dot(Y1).dot(Vi_X.T)
+            B2k = ei.T.dot(Y2).dot(Vi_X.T)
+            yield np.vstack((F1, F2)), wi, np.vstack((B1k, B2k))
 
+    def calculate(self, tk):
+        objects = np.array(tuple(self.build_matrices(tk)), dtype=object)
+        F = F = np.vstack(objects[:, 0])
+        W = np.hstack(objects[:, 1])
+        Bsk = np.vstack(objects[:, 2])
+        Bsk = np.vstack((Bsk[::2, :], Bsk[1::2, :]))
+        return F, W, Bsk
+
+    def inexact_Newthon(self, tk):
+        F, W, Bsk = self.calculate(tk)
+        Rp = np.kron(self.e, self.Xk) + self.dt * \
+            np.kron(self.A_tab, np.eye(self.ni)).dot(F) - self.Y
+        b = -self.dt*np.kron(self.A_tab, np.eye(self.ni)).dot(Bsk) - Rp
+        A = self.dt*np.kron(self.A_tab, W.T) + np.eye(int(self.s*self.ni))
+        return A, b
+
+    def Xk1(self, Y, tk):
+        Y1 = Y[:self.ni, :]
+        Y2 = Y[self.ni:, :]
+        for i,x in enumerate(self.Mi):
+            self.x = x
+            F1 = self.F_m(Y1, tk, i)
+            F2 = self.F_m(Y2, tk, i)
+            F = np.vstack((F1, F2))
+
+        return np.kron(self.e, self.Xk) + self.dt*np.kron(self.A_tab, np.eye(self.ni)).dot(Fk) - self.Y
+
+    # def step(self, Xk):
+    #     Xk1 = Xk + self.dt*(np.kron(self.b.T, np.eye(self.ni))).dot(self)
+
+
+# class inexact_Newthon(assembled_matrix):
+#     def vi(self, X, tk):
+#         return X.T.dot(self.grad_am()) + self.G_tilde(tk).T.dot(self.grad_am())
+
+#     def wi(self, X, i):
+#         ei = np.zeros((self.ni, 1))
+#         ei[int(i)] = 1
+#         return self.grad_am().dot(X.T).dot(ei) - self.nu*self.lap_am()
 
 
 class exact_solution(object):
