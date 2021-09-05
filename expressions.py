@@ -374,7 +374,7 @@ class solve_matrix(assembled_matrix):
             self.x = x
             F1 = self.F_m(Y1, tk, i)
             F2 = self.F_m(Y2, tk, i)
-            F = np.vstack((F1, F2))
+            Fk = np.vstack((F1, F2))
 
         return np.kron(self.e, self.Xk) + self.dt*np.kron(self.A_tab, np.eye(self.ni)).dot(Fk) - self.Y
 
