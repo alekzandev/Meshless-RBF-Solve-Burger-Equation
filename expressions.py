@@ -17,7 +17,7 @@ class terms_uh(object):
     l: norm order (1,2,np.inf)
     '''
 
-    def __init__(self, Mb, npnts, c=1, beta=1, nu=1, mu=1., epsilon=1, poly_b=np.array([1]),  rbf='TPS', l=2):
+    def __init__(self, Mb, npnts, c=1, beta=1, nu=0.1, mu=1., epsilon=1, poly_b=np.array([1]),  rbf='TPS', l=2):
         # np.random.seed(9936)
         self.Mb = Mb
         self.nb = Mb.shape[0]
@@ -36,6 +36,7 @@ class terms_uh(object):
         self.rbf = rbf
         self.l = l
         self.alpha = 1
+        self.exact_solution = "1"
 
     def drop_to_zero(self, M, tol=1e-5):
         return np.where(abs(M) < tol, 0, M)
@@ -121,7 +122,12 @@ class terms_uh(object):
         return np.hstack((col1, col2, col3))
 
     def G(self, t):
-        return self.Mb/((t+self.alpha)+(t+self.alpha)**2 * np.exp(self.norm_x(self.Mb).reshape(-1, 1) ** 2/(4*(self.alpha+t))))
+        if self.exact_solution=="1":
+            return self.Mb/((t+self.alpha)+(t+self.alpha)**2 * np.exp(self.norm_x(self.Mb).reshape(-1, 1) ** 2/(4*(self.alpha+t))))
+        elif self.exact_solution == "2":
+            u = 3/4 - 1/(4*(1+np.exp((4*self.Mb[:,1] - 4*self.Mb[:,0] - t)/(self.nu*32))))
+            v = 3/4 + 1/(4*(1+np.exp((4*self.Mb[:,1] - 4*self.Mb[:,0] - t)/(self.nu*32))))
+            return np.hstack((u.reshape(-1,1), v.reshape(-1,1)))
 
     def G_tilde(self, t):
         return np.vstack((self.G(t), self.O1()))
@@ -286,11 +292,16 @@ class assembled_matrix(operators):
             return self.drop_to_zero(3 * self.epsilon**2 * ((3 * self.epsilon**2 * M**2 + 2)/np.sqrt(self.epsilon**2 * M**2 + 1)))
 
     def X_0(self):
-        alpha = self.alpha
-        n = self.norm_x(self.Mi)
-        c1 = self.Mi[:, 0]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
-        c2 = self.Mi[:, 1]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
-        return np.hstack((c1.reshape(-1, 1), c2.reshape(-1, 1)))
+        if self.exact_solution=="1":
+            alpha = self.alpha
+            n = self.norm_x(self.Mi)
+            c1 = self.Mi[:, 0]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
+            c2 = self.Mi[:, 1]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
+            return np.hstack((c1.reshape(-1, 1), c2.reshape(-1, 1)))
+        elif self.exact_solution=="2":
+            u = 3/4 - 1/(4*(1+np.exp((4*self.Mi[:,1] - 4*self.Mi[:,0])/(self.nu*32))))
+            v = 3/4 + 1/(4*(1+np.exp((4*self.Mi[:,1] - 4*self.Mi[:,0])/(self.nu*32))))
+            return np.hstack((u.reshape(-1,1), v.reshape(-1,1)))
 
     def F_m(self, X0, t, i=0):
         dissipation_term = self.nu * \
