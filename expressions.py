@@ -403,7 +403,7 @@ class solve_matrix(assembled_matrix):
 #         return self.grad_am().dot(X.T).dot(ei) - self.nu*self.lap_am()
 
 
-class exact_solution(object):
+class create_domain(object):
     def __init__(self, A=None, t=None, nu=None, radius=0.15, c_x=0.5, c_y=0.5):
         self.A = A
         self.x = A[:, 0]
@@ -414,17 +414,23 @@ class exact_solution(object):
         self.c_x = c_x
         self.c_y = c_y
 
-    def domain(self):
-        dist_from_center = np.sqrt(
-            (self.x - self.c_x)**2 + (self.y - self.c_y)**2)
-        mask = dist_from_center < self.radius
-        # mask_x = np.logical_and(
-        #     self.x > self.c_x - self.radius, self.x < self.c_x + self.radius)
-        # A = self.A.copy()
-        # A = A[mask]
-        # mask_y = np.logical_and(
-        #     A[:, 1] > self.c_y - self.radius, A[:, 1] < self.c_y + self.radius)
-        return self.A[mask]
+    def setup(self, domain = 'unit_square'):
+        if domain == 'circle_centre':
+            dist_from_center = np.sqrt(
+                (self.x - self.c_x)**2 + (self.y - self.c_y)**2)
+            n_round = str(self.radius)
+            n_round = len(n_round.split('.')[-1])
+            maskf = dist_from_center.round(n_round) == self.radius
+            maskd = dist_from_center > self.radius + 1e-2
+            # mask_x = np.logical_and(
+            #     self.x > self.c_x - self.radius, self.x < self.c_x + self.radius)
+            # A = self.A.copy()
+            # A = A[mask]
+            # mask_y = np.logical_and(
+            #     A[:, 1] > self.c_y - self.radius, A[:, 1] < self.c_y + self.radius)
+            return self.A[maskd], self.A[maskf]
+        elif domain=='unit_square':
+            return self.A, np.empty((0,2))
 
     def hopf_cole_transform(self):
         Omega = self.domain()
