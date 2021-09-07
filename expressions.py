@@ -122,12 +122,16 @@ class terms_uh(object):
         return np.hstack((col1, col2, col3))
 
     def G(self, t):
-        if self.exact_solution=="1":
+        if self.exact_solution == "1":
             return self.Mb/((t+self.alpha)+(t+self.alpha)**2 * np.exp(self.norm_x(self.Mb).reshape(-1, 1) ** 2/(4*(self.alpha+t))))
         elif self.exact_solution == "2":
-            u = 3/4 - 1/(4*(1+np.exp((4*self.Mb[:,1] - 4*self.Mb[:,0] - t)/(self.nu*32))))
-            v = 3/4 + 1/(4*(1+np.exp((4*self.Mb[:,1] - 4*self.Mb[:,0] - t)/(self.nu*32))))
-            return np.hstack((u.reshape(-1,1), v.reshape(-1,1)))
+            u = 3/4 - 1 / \
+                (4*(1+np.exp((4*self.Mb[:, 1] - 4 *
+                              self.Mb[:, 0] - t)/(self.nu*32))))
+            v = 3/4 + 1 / \
+                (4*(1+np.exp((4*self.Mb[:, 1] - 4 *
+                              self.Mb[:, 0] - t)/(self.nu*32))))
+            return np.hstack((u.reshape(-1, 1), v.reshape(-1, 1)))
 
     def G_tilde(self, t):
         return np.vstack((self.G(t), self.O1()))
@@ -292,16 +296,22 @@ class assembled_matrix(operators):
             return self.drop_to_zero(3 * self.epsilon**2 * ((3 * self.epsilon**2 * M**2 + 2)/np.sqrt(self.epsilon**2 * M**2 + 1)))
 
     def X_0(self):
-        if self.exact_solution=="1":
+        if self.exact_solution == "1":
             alpha = self.alpha
             n = self.norm_x(self.Mi)
-            c1 = self.Mi[:, 0]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
-            c2 = self.Mi[:, 1]/(alpha + (alpha ** 2) * np.exp((n ** 2)/(4*alpha)))
+            c1 = self.Mi[:, 0]/(alpha + (alpha ** 2) *
+                                np.exp((n ** 2)/(4*alpha)))
+            c2 = self.Mi[:, 1]/(alpha + (alpha ** 2) *
+                                np.exp((n ** 2)/(4*alpha)))
             return np.hstack((c1.reshape(-1, 1), c2.reshape(-1, 1)))
-        elif self.exact_solution=="2":
-            u = 3/4 - 1/(4*(1+np.exp((4*self.Mi[:,1] - 4*self.Mi[:,0])/(self.nu*32))))
-            v = 3/4 + 1/(4*(1+np.exp((4*self.Mi[:,1] - 4*self.Mi[:,0])/(self.nu*32))))
-            return np.hstack((u.reshape(-1,1), v.reshape(-1,1)))
+        elif self.exact_solution == "2":
+            u = 3/4 - 1 / \
+                (4 *
+                 (1+np.exp((4*self.Mi[:, 1] - 4*self.Mi[:, 0])/(self.nu*32))))
+            v = 3/4 + 1 / \
+                (4 *
+                 (1+np.exp((4*self.Mi[:, 1] - 4*self.Mi[:, 0])/(self.nu*32))))
+            return np.hstack((u.reshape(-1, 1), v.reshape(-1, 1)))
 
     def F_m(self, X0, t, i=0):
         dissipation_term = self.nu * \
@@ -381,7 +391,7 @@ class solve_matrix(assembled_matrix):
     def Xk1(self, Y, tk):
         Y1 = Y[:self.ni, :]
         Y2 = Y[self.ni:, :]
-        for i,x in enumerate(self.Mi):
+        for i, x in enumerate(self.Mi):
             self.x = x
             F1 = self.F_m(Y1, tk, i)
             F2 = self.F_m(Y2, tk, i)
@@ -414,13 +424,23 @@ class create_domain(object):
         self.c_x = c_x
         self.c_y = c_y
 
-    def setup(self, domain = 'unit_square'):
+    def setup(self, domain='unit_square', bound_points=20):
         if domain == 'circle_centre':
             dist_from_center = np.sqrt(
                 (self.x - self.c_x)**2 + (self.y - self.c_y)**2)
-            n_round = str(self.radius)
-            n_round = len(n_round.split('.')[-1])
-            maskf = dist_from_center.round(n_round) == self.radius
+            #n_round = str(self.radius)
+            #n_round = len(n_round.split('.')[-1])
+            #maskf = dist_from_center.round(n_round) == self.radius
+            x = HaltonPoints(1, bound_points).haltonPoints().reshape(1, -1)[0]
+            x = x[(x <= self.c_x + self.radius) &
+                  (x >= self.c_x - self.radius)].copy()
+            dx = abs(x - self.c_x)
+            dy1 = np.sqrt(self.radius**2 - dx**2)
+            dy2 = -np.sqrt(self.radius**2 - dx**2)
+            y1 = self.c_y + dy1
+            y2 = self.c_y + dy2
+            f1 = np.hstack((x.reshape(-1, 1), y1.reshape(-1, 1)))
+            f2 = np.hstack((x.reshape(-1, 1), y2.reshape(-1, 1)))
             maskd = dist_from_center > self.radius + 1e-2
             # mask_x = np.logical_and(
             #     self.x > self.c_x - self.radius, self.x < self.c_x + self.radius)
@@ -428,9 +448,9 @@ class create_domain(object):
             # A = A[mask]
             # mask_y = np.logical_and(
             #     A[:, 1] > self.c_y - self.radius, A[:, 1] < self.c_y + self.radius)
-            return self.A[maskd], self.A[maskf]
-        elif domain=='unit_square':
-            return self.A, np.empty((0,2))
+            return self.A[maskd], np.vstack((f1, f2))
+        elif domain == 'unit_square':
+            return self.A, np.empty((0, 2))
 
     def hopf_cole_transform(self):
         Omega = self.domain()
