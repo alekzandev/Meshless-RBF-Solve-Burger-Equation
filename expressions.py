@@ -60,7 +60,7 @@ class terms_uh(object):
         return np.zeros((self.dm, self.d))
 
     def O2(self):
-        return np.zeros((self.dm, self.dm)) + 0.001*np.eye(self.dm)
+        return np.zeros((self.dm, self.dm)) + 1e-1*np.eye(self.dm)
 
     def K1(self):
         if self.rbf == 'TPS':
@@ -305,12 +305,10 @@ class assembled_matrix(operators):
                                 np.exp((n ** 2)/(4*alpha)))
             return np.hstack((c1.reshape(-1, 1), c2.reshape(-1, 1)))
         elif self.exact_solution == "2":
-            u = 3/4 - 1 / \
-                (4 *
-                 (1+np.exp((4*self.Mi[:, 1] - 4*self.Mi[:, 0])/(self.nu*32))))
-            v = 3/4 + 1 / \
-                (4 *
-                 (1+np.exp((4*self.Mi[:, 1] - 4*self.Mi[:, 0])/(self.nu*32))))
+            x = self.Mi[:, 0]
+            y = self.Mi[:, 1]
+            u = 3/4 - 1/4 * (1/(1+np.exp((4*y-4*x)/(self.nu*32))))
+            v = 3/4 + 1/4 * (1/(1+np.exp((4*y-4*x)/(self.nu*32))))
             return np.hstack((u.reshape(-1, 1), v.reshape(-1, 1)))
 
     def F_m(self, X0, t, i=0):

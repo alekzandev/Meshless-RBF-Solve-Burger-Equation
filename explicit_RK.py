@@ -1,5 +1,7 @@
 import numpy as np
 
+from analytical_solution import *
+
 
 class explicit_RungeKutta(object):
     def __init__(self, f, u0, t0, te, N, uh):
@@ -30,11 +32,15 @@ class explicit_RungeKutta(object):
     def step(self):
         u_n = self.u0
         yield u_n
-        # print(self.timegrid)
+        d_round = len(str(self.dt).split('.')[-1])
+        solution = exact_solution(self.uh.Mi, self.uh.nu)
         for t in self.timegrid[1:]:
+            t = round(t, d_round)
             u_n = self.stagef(t)
             self.u0 = u_n
-            print("t={}".format(t))
+            u = solution.u(t)
+            error = np.mean(abs(u-u_n)/u)*100
+            print("t={}  error={:.4f}%".format(t, error))
             yield u_n
 
     def solve(self):

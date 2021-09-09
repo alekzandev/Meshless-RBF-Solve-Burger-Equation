@@ -2,9 +2,9 @@ import numpy as np
 
 
 class exact_solution(object):
-    def __init__(self, Mi, nu):
+    def __init__(self, X, nu):
         self.nu = nu
-        self.X = Mi
+        self.X = X
 
     def u(self, t):
         x = self.X[:, 0]
