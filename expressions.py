@@ -17,7 +17,7 @@ class terms_uh(object):
     l: norm order (1,2,np.inf)
     '''
 
-    def __init__(self, Mb, npnts, c=1, beta=1, nu=0.1, mu=1., epsilon=1, poly_b=np.array([1]),  rbf='TPS', l=2):
+    def __init__(self, Mb, npnts, c=1, beta=1, nu=0.1, mu=1., epsilon=10, poly_b=np.array([1]),  rbf='TPS', l=2):
         # np.random.seed(9936)
         self.Mb = Mb
         self.nb = Mb.shape[0]
@@ -125,39 +125,52 @@ class terms_uh(object):
         if self.exact_solution == "1":
             return self.Mb/((t+self.alpha)+(t+self.alpha)**2 * np.exp(self.norm_x(self.Mb).reshape(-1, 1) ** 2/(4*(self.alpha+t))))
         elif self.exact_solution == "2":
-            u = 3/4 - 1 / \
-                (4*(1+np.exp((4*self.Mb[:, 1] - 4 *
-                              self.Mb[:, 0] - t)/(self.nu*32))))
-            v = 3/4 + 1 / \
-                (4*(1+np.exp((4*self.Mb[:, 1] - 4 *
-                              self.Mb[:, 0] - t)/(self.nu*32))))
+            x = self.Mb[:, 0]
+            y = self.Mb[:, 0]
+            u = 3/4 - 1/4 * (1/(1 + np.exp((4*y - 4*x - t)/(self.nu*32))))
+            v = 3/4 + 1/4 * (1/(1 + np.exp((4*y - 4*x - t)/(self.nu*32))))
             return np.hstack((u.reshape(-1, 1), v.reshape(-1, 1)))
 
     def G_tilde(self, t):
         return np.vstack((self.G(t), self.O1()))
 
     def A(self):
-        A1 = np.hstack((self.K2(), self.Q2()))
-        A2 = np.hstack((self.Q2().T, self.O2()))
-        return np.vstack((A1, A2))
+        if self.rbf == 'TPS':
+            A1 = np.hstack((self.K2(), self.Q2()))
+            A2 = np.hstack((self.Q2().T, self.O2()))
+            return np.vstack((A1, A2))
+        elif self.rbf == 'MQ':
+            return self.K2()
 
     def ACaps(self):
-        r1 = np.hstack((self.K1(), self.M(), self.Q1()))
-        r2 = np.hstack((self.M().T, self.K2(), self.Q2()))
-        r3 = np.hstack((self.Q1().T, self.Q2().T, self.O2()))
-        return np.vstack((r1, r2, r3))
+        if self.rbf == 'TPS':
+            r1 = np.hstack((self.K1(), self.M(), self.Q1()))
+            r2 = np.hstack((self.M().T, self.K2(), self.Q2()))
+            r3 = np.hstack((self.Q1().T, self.Q2().T, self.O2()))
+            return np.vstack((r1, r2, r3))
+        elif self.rbf == 'MQ':
+            r1 = np.hstack((self.K1(), self.M()))
+            r2 = np.hstack((self.M().T, self.K2()))
+            return np.vstack((r1, r2))
 
     def Sinv(self):
-        MQ1 = np.hstack((self.M(), self.Q1()))
-        MQ1T = np.vstack((self.M().T, self.Q1().T))
-        Ainv = np.linalg.inv(self.A())
-        S = self.K1() - np.matmul(MQ1, np.matmul(Ainv, MQ1T))
-        return np.linalg.inv(S)
+        if self.rbf == 'TPS':
+            MQ1 = np.hstack((self.M(), self.Q1()))
+            MQ1T = np.vstack((self.M().T, self.Q1().T))
+            Ainv = np.linalg.inv(self.A())
+            S = self.K1() - np.matmul(MQ1, np.matmul(Ainv, MQ1T))
+            return np.linalg.inv(S)
+        elif self.rbf == 'MQ':
+            S = self.K1() - self.M().dot(np.linalg.inv(self.A())).dot(self.M().T)
+            return np.linalg.inv(S)
 
     def B(self):
-        MQ1 = np.hstack((self.M(), self.Q1()))
-        Ainv = np.linalg.inv(self.A())
-        return np.matmul(MQ1, Ainv)
+        if self.rbf == 'TPS':
+            MQ1 = np.hstack((self.M(), self.Q1()))
+            Ainv = np.linalg.inv(self.A())
+            return np.matmul(MQ1, Ainv)
+        elif self.rbf == 'MQ':
+            return self.M().dot(np.linalg.inv(self.A()))
 
     def C(self):
         return np.linalg.inv(self.A()) + np.matmul(self.B().T, np.matmul(self.Sinv(), self.B()))
@@ -188,16 +201,23 @@ class terms_uh(object):
             return np.vstack((row1, row2, row3))
 
     def a_m_op(self, lin_op):
-        gam_thet = np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
-        term_par = np.matmul(self.B(), gam_thet) - self.lambda_m(lin_op)
-        return - np.matmul(self.Sinv(), term_par)
+        if self.rbf == 'TPS':
+            gam_thet = np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
+            term_par = np.matmul(self.B(), gam_thet) - self.lambda_m(lin_op)
+            return - np.matmul(self.Sinv(), term_par)
+        elif self.rbf == 'MQ':
+            term_par = self.B().dot(self.gamma_m(lin_op)) - self.lambda_m(lin_op)
+            return -self.Sinv().dot(term_par)
 
     def b_m_op(self, lin_op):
-        gam_thet = np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
-        fterm = np.matmul(self.C(), gam_thet)
-        sterm = np.matmul(self.B().T, np.matmul(
-            self.Sinv(), self.lambda_m(lin_op)))
-        return fterm - sterm
+        if self.rbf == 'TPS':
+            gam_thet = np.vstack((self.gamma_m(lin_op), self.theta_m(lin_op)))
+            fterm = np.matmul(self.C(), gam_thet)
+            sterm = np.matmul(self.B().T, np.matmul(
+                self.Sinv(), self.lambda_m(lin_op)))
+            return fterm - sterm
+        elif self.rbf == 'MQ':
+            return self.C().dot(self.gamma_m(lin_op)) - self.B().T.dot(self.Sinv()).dot(self.lambda_m(lin_op))
 
     def a_m(self):
         return self.a_m_op(self.RBF)
@@ -312,16 +332,30 @@ class assembled_matrix(operators):
             return np.hstack((u.reshape(-1, 1), v.reshape(-1, 1)))
 
     def F_m(self, X0, t, i=0):
-        dissipation_term = self.nu * \
-            (np.matmul(self.lap_am().T, X0) +
-             np.matmul(self.lap_bm().T, self.G_tilde(t)))
-        ei = np.zeros((self.ni, 1))
-        ei[int(i)] = 1
-        advection_term1 = np.matmul(ei.T, X0)
-        advection_term2 = np.matmul(
-            self.grad_am().T, X0) + np.matmul(self.grad_bm().T, self.G_tilde(t))
-        advection_term = self.mu * np.matmul(advection_term1, advection_term2)
-        return dissipation_term - advection_term
+        if self.rbf == 'TPS':
+            dissipation_term = self.nu * \
+                (np.matmul(self.lap_am().T, X0) +
+                 np.matmul(self.lap_bm().T, self.G_tilde(t)))
+            ei = np.zeros((self.ni, 1))
+            ei[int(i)] = 1
+            advection_term1 = np.matmul(ei.T, X0)
+            advection_term2 = np.matmul(
+                self.grad_am().T, X0) + np.matmul(self.grad_bm().T, self.G_tilde(t))
+            advection_term = self.mu * \
+                np.matmul(advection_term1, advection_term2)
+            return dissipation_term - advection_term
+        elif self.rbf == 'MQ':
+            dissipation_term = self.nu * \
+                (np.matmul(self.lap_am().T, X0) +
+                 np.matmul(self.lap_bm().T, self.G(t)))
+            ei = np.zeros((self.ni, 1))
+            ei[int(i)] = 1
+            advection_term1 = np.matmul(ei.T, X0)
+            advection_term2 = np.matmul(
+                self.grad_am().T, X0) + np.matmul(self.grad_bm().T, self.G(t))
+            advection_term = self.mu * \
+                np.matmul(advection_term1, advection_term2)
+            return dissipation_term - advection_term
 
 
 class stabillity(terms_uh):
