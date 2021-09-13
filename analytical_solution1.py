@@ -33,6 +33,3 @@ def u_analytical2(x, t, nu=1):
     den = integrate.quad(k0(x), 0, 1)[0] + subden
 
     return 2 * nu * np.pi * num/den
-
-
-print(u_analytical2(1, 0))
