@@ -82,14 +82,14 @@ class terms_uh(object):
     def q(self, x, y, i):
         # Hermite grade m-1
         if i == 1:
-            return np.ones(x.shape)
-            #return -x-y+np.ones(x.shape)
+            #return np.ones(x.shape)
+            return -x-y+np.ones(x.shape)
         elif i == 2:
-            return 2*x
-            #return 1/2*x+3/2*y-np.ones(x.shape)
+            #return 2*x
+            return 1/2*x+3/2*y-np.ones(x.shape)
         elif i == 3:
-            return 2*y
-            #return 3/2*x+1/8*y-3/8*np.ones(x.shape)
+            #return 2*y
+            return 3/2*x+1/8*y-3/8*np.ones(x.shape)
 
     def lap_q(self, x, i):
         #Hermite and lagrange
@@ -103,11 +103,14 @@ class terms_uh(object):
     def grad_q(self, x, y, i):
         # #Hermite m-1
         if i == 1:
-            return np.hstack((0, 0)).reshape(1, -1)
+            #return np.hstack((0, 0)).reshape(1, -1)
+            return np.hstack((-1, -1)).reshape(1, -1)
         elif i == 2:
-            return np.hstack((2, 0)).reshape(1, -1)
+            #return np.hstack((2, 0)).reshape(1, -1)
+            return np.hstack((1/2, 3/2)).reshape(1, -1)
         elif i == 3:
-            return np.hstack((0, 2)).reshape(1, -1)
+            #return np.hstack((0, 2)).reshape(1, -1)
+            return np.hstack((3/2, 1/8)).reshape(1, -1)
 
     def poly_basis(self, M, i):
         return self.q(M[:, 0].reshape(-1, 1), M[:, 1].reshape(-1, 1), i)
