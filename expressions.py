@@ -82,14 +82,14 @@ class terms_uh(object):
     def q(self, x, y, i):
         # Hermite grade m-1
         if i == 1:
-            #return np.ones(x.shape)
-            return -x-y+np.ones(x.shape)
+            return np.ones(x.shape)
+            #return -x-y+np.ones(x.shape)
         elif i == 2:
-            #return 2*x
-            return 1/2*x+3/2*y-np.ones(x.shape)
+            return 2*x
+            #return 1/2*x+3/2*y-np.ones(x.shape)
         elif i == 3:
-            #return 2*y
-            return 3/2*x+1/8*y-3/8*np.ones(x.shape)
+            return 2*y
+            #return 3/2*x+1/8*y-3/8*np.ones(x.shape)
 
     def lap_q(self, x, i):
         #Hermite and lagrange
