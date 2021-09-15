@@ -30,15 +30,15 @@ class explicit_RungeKutta(object):
                            + self.f(t + self.dt, self.stage4(t), self.uh))
 
     def step(self):
-        u_n = self.u0
+        u_n = self.u0.round(4)
         yield u_n
         d_round = len(str(self.dt).split('.')[-1])
         solution = exact_solution(self.uh.Mi, self.uh.nu)
         for t in self.timegrid[1:]:
             t = round(t, d_round)
-            u_n = self.stagef(t)
+            u_n = self.stagef(t).round(4)
             self.u0 = u_n
-            u = solution.u(t)
+            u = solution.u(t).round(4)
             error = np.mean(abs(u-u_n)/u)*100
             print("t={}  error={:.4f}%".format(t, error))
             yield u_n
