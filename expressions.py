@@ -37,6 +37,7 @@ class terms_uh(object):
         self.l = l
         self.alpha = 1
         self.exact_solution = "1"
+        self.pols = 'Hermite'
 
     def drop_to_zero(self, M, tol=1e-5):
         return np.where(abs(M) < tol, 0, M)
@@ -80,19 +81,30 @@ class terms_uh(object):
         return self.RBF(self.norm_x(self.matrix_M()))
 
     def q(self, x, y, i):
-        # Hermite grade m-1
-        if i == 1:
-            return np.ones(x.shape)
-            #return -x-y+np.ones(x.shape)
-        elif i == 2:
-            return 2*x
-            #return 1/2*x+3/2*y-np.ones(x.shape)
-        elif i == 3:
-            return 2*y
-            #return 3/2*x+1/8*y-3/8*np.ones(x.shape)
+        if self.pols == 'Hermite':
+            if i == 1:
+                return np.ones(x.shape) #Hermite #Laguerre
+            elif i == 2:
+                return 2*x #Hermite
+            elif i == 3:
+                return 2*y #Hermite
+                
+        elif self.pols == 'Laguerre':
+            if i == 1:
+                return np.ones(x.shape) #Hermite #Laguerre
+            elif i == 2:
+                return np.ones(x.shape) - x #Laguerre
+            elif i == 3:
+                return np.ones(x.shape) - y #Laguerre
+        elif self.pols == 'Arbitrary':
+            if i == 1:
+                return -x - y + np.ones(x.shape)
+            elif i == 2:
+                return 1/2*x + 3/2*y - np.ones(x.shape)
+            elif i == 3:
+                return 3/2*x + 1/8*y - 3/8*np.ones(x.shape)
 
     def lap_q(self, x, i):
-        #Hermite and lagrange
         if i == 1:
             return 0
         elif i == 2:
@@ -101,16 +113,30 @@ class terms_uh(object):
             return 0
 
     def grad_q(self, x, y, i):
-        # #Hermite m-1
-        if i == 1:
-            return np.hstack((0, 0)).reshape(1, -1)
-            #return np.hstack((-1, -1)).reshape(1, -1)
-        elif i == 2:
-            return np.hstack((2, 0)).reshape(1, -1)
-            #return np.hstack((1/2, 3/2)).reshape(1, -1)
-        elif i == 3:
-            return np.hstack((0, 2)).reshape(1, -1)
-            #return np.hstack((3/2, 1/8)).reshape(1, -1)
+        if self.pols == 'Hermite':
+            # #Hermite m-1
+            if i == 1:
+                return np.hstack((0, 0)).reshape(1, -1) #Hermite #Laguerre
+            elif i == 2:
+                return np.hstack((2, 0)).reshape(1, -1) #Hermite
+            elif i == 3:
+                return np.hstack((0, 2)).reshape(1, -1) #Hermite
+        elif self.pols == 'Laguerre':
+            # #Hermite m-1
+            if i == 1:
+                return np.hstack((0, 0)).reshape(1, -1) #Hermite #Laguerre
+            elif i == 2:
+                return np.hstack((-1, 0)).reshape(1, -1) #Laguerre
+            elif i == 3:
+                return np.hstack((0, -1)).reshape(1, -1) #Laguerre
+        elif self.pols == 'Arbitrary':
+            # #Hermite m-1
+            if i == 1:
+                return np.hstack((-1, -1)).reshape(1, -1)
+            elif i == 2:
+                return np.hstack((1/2, 3/2)).reshape(1, -1)
+            elif i == 3:
+                return np.hstack((3/2, 1/8)).reshape(1, -1)
 
     def poly_basis(self, M, i):
         return self.q(M[:, 0].reshape(-1, 1), M[:, 1].reshape(-1, 1), i)
