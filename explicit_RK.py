@@ -28,7 +28,7 @@ class explicit_RungeKutta(object):
                            + 2*self.f(t + self.dt/2, self.stage2(t), self.uh)
                            + 2*self.f(t + self.dt/2, self.stage3(t), self.uh)
                            + self.f(t + self.dt, self.stage4(t), self.uh))
-
+    
     def step(self):
         u_n = self.u0.round(4)
         yield u_n
