@@ -462,8 +462,8 @@ class solve_matrix(assembled_matrix):
             Fk = np.vstack((F1[0], F2[0]))
             yield Fk
 
-    def step(self):
-        F = np.vstack(tuple(self.Xk1(self.Y, self.dt)))
+    def step(self, tk):
+        F = np.vstack(tuple(self.Xk1(self.Y, tk)))
         Fk = np.zeros(F.shape)
         Fk[:int(F.shape[0]/2), :] = F[::2,:]
         Fk[int(F.shape[0]/2):, :] = F[1::2,:]
