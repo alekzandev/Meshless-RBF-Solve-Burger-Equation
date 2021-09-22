@@ -415,7 +415,7 @@ class solve_matrix(assembled_matrix):
         self.Y = Y
         self.p = (3 - np.sqrt(3))/6
         self.A_tab = np.array([[self.p, 0], [1 - 2*self.p, self.p]])
-        self.b_tab = np.array([1/2, 1/2])
+        self.b_tab = np.array([1/2, 1/2]).reshape(-1,1)
         self.c_tab = np.array([self.p, 1-self.p])
         self.e = np.ones((2, 1))
         self.s = len(self.c_tab)
@@ -459,12 +459,15 @@ class solve_matrix(assembled_matrix):
             self.x = x
             F1 = self.F_m(Y1, tk, i)
             F2 = self.F_m(Y2, tk, i)
-            Fk = np.vstack((F1, F2))
+            Fk = np.vstack((F1[0], F2[0]))
+            yield Fk
 
-        return np.kron(self.e, self.Xk) + self.dt*np.kron(self.A_tab, np.eye(self.ni)).dot(Fk) - self.Y
-
-    # def step(self, Xk):
-    #     Xk1 = Xk + self.dt*(np.kron(self.b.T, np.eye(self.ni))).dot(self)
+    def step(self):
+        F = np.vstack(tuple(self.Xk1(self.Y, self.dt)))
+        Fk = np.zeros(F.shape)
+        Fk[:int(F.shape[0]/2), :] = F[::2,:]
+        Fk[int(F.shape[0]/2):, :] = F[1::2,:]
+        return self.Xk + self.dt*(np.kron(self.b_tab.T, np.eye(self.ni))).dot(Fk)
 
 
 # class inexact_Newthon(assembled_matrix):
