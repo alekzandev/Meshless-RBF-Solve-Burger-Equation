@@ -431,7 +431,7 @@ class solve_matrix(assembled_matrix):
             ei[i] = 1
             wi = self.grad_am().dot(self.Xk.T).dot(ei) - self.nu * self.lap_am()
             Vi_X = self.Xk.T.dot(self.grad_am()) + \
-                self.G_tilde(tk).T.dot(self.grad_bm())
+                self.G_tilde(tk/2).T.dot(self.grad_bm())
             B1k = ei.T.dot(Y1).dot(Vi_X.T)
             B2k = ei.T.dot(Y2).dot(Vi_X.T)
             yield np.vstack((F1, F2)), wi, np.vstack((B1k, B2k))

@@ -36,11 +36,13 @@ class explicit_RungeKutta(object):
         solution = exact_solution(self.uh.Mi, self.uh.nu)
         for t in self.timegrid[1:]:
             t = round(t, d_round)
-            u_n = self.stagef(t).round(4)
+            u_n = self.stagef(t)#.round(6)
             self.u0 = u_n
-            u = solution.u(t).round(4)
-            error = np.mean(abs(u-u_n)/u)*100
-            print("t={}  error={:.4f}%".format(t, error))
+            u = solution.u(t)#.round(6)
+            #error = np.mean(abs(u-u_n)/u)*100
+            #print("t={}  error={:.4f}%".format(t, error))
+            error = np.linalg.norm(u-u_n)/np.linalg.norm(u)*100
+            print("t={}  error={:.12f}%".format(t, error))
             yield u_n
 
     def solve(self):
