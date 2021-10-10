@@ -38,6 +38,9 @@ class terms_uh(object):
         self.alpha = 1
         self.exact_solution = "1"
         self.pols = 'Hermite'
+        self.coef_pol = 1
+        self.varepsilon = 1e-1
+        self.lambda_K = 1
 
     def drop_to_zero(self, M, tol=1e-5):
         return np.where(abs(M) < tol, 0, M)
@@ -61,11 +64,11 @@ class terms_uh(object):
         return np.zeros((self.dm, self.d))
 
     def O2(self):
-        return np.zeros((self.dm, self.dm)) + 1e-1*np.eye(self.dm)
+        return np.zeros((self.dm, self.dm)) + self.varepsilon*np.eye(self.dm)
 
     def K1(self):
         if self.rbf == 'TPS':
-            self.lambda_K = 1
+            lambda_K = 1
         elif self.rbf == 'MQ':
             self.lambda_K = 0
         return self.RBF(self.norm_x(self.matrix_K(self.Mi))) + self.lambda_K*np.eye(self.ni)
@@ -116,11 +119,11 @@ class terms_uh(object):
         if self.pols == 'Hermite':
             # #Hermite m-1
             if i == 1:
-                return np.hstack((0, 0)).reshape(1, -1) #Hermite #Laguerre
+                return self.coef_pol*np.hstack((0, 0)).reshape(1, -1) #Hermite #Laguerre
             elif i == 2:
-                return np.hstack((2, 0)).reshape(1, -1) #Hermite
+                return self.coef_pol*np.hstack((2, 0)).reshape(1, -1) #Hermite
             elif i == 3:
-                return np.hstack((0, 2)).reshape(1, -1) #Hermite
+                return self.coef_pol*np.hstack((0, 2)).reshape(1, -1) #Hermite
         elif self.pols == 'Laguerre':
             # #Hermite m-1
             if i == 1:
@@ -145,13 +148,13 @@ class terms_uh(object):
         col1 = self.poly_basis(self.Mi, 1)
         col2 = self.poly_basis(self.Mi, 2)
         col3 = self.poly_basis(self.Mi, 3)
-        return np.hstack((col1, col2, col3))
+        return self.coef_pol*np.hstack((col1, col2, col3))
 
     def Q2(self):
         col1 = self.poly_basis(self.Mb, 1)
         col2 = self.poly_basis(self.Mb, 2)
         col3 = self.poly_basis(self.Mb, 3)
-        return np.hstack((col1, col2, col3))
+        return self.coef_pol*np.hstack((col1, col2, col3))
 
     def G(self, t):
         if self.exact_solution == "1":
