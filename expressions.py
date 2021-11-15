@@ -37,6 +37,10 @@ class terms_uh(object):
         self.l = l
         self.alpha = 1
         self.exact_solution = "1"
+        self.pols = 'Hermite'
+        self.coef_pol = 1
+        self.varepsilon = 1e-1
+        self.lambda_K = 1
 
     def drop_to_zero(self, M, tol=1e-5):
         return np.where(abs(M) < tol, 0, M)
@@ -60,11 +64,11 @@ class terms_uh(object):
         return np.zeros((self.dm, self.d))
 
     def O2(self):
-        return np.zeros((self.dm, self.dm)) + 1e-1*np.eye(self.dm)
+        return np.zeros((self.dm, self.dm)) + self.varepsilon*np.eye(self.dm)
 
     def K1(self):
         if self.rbf == 'TPS':
-            self.lambda_K = 1
+            lambda_K = 1
         elif self.rbf == 'MQ':
             self.lambda_K = 0
         return self.RBF(self.norm_x(self.matrix_K(self.Mi))) + self.lambda_K*np.eye(self.ni)
@@ -80,19 +84,30 @@ class terms_uh(object):
         return self.RBF(self.norm_x(self.matrix_M()))
 
     def q(self, x, y, i):
-        # Hermite grade m-1
-        if i == 1:
-            return np.ones(x.shape)
-            #return -x-y+np.ones(x.shape)
-        elif i == 2:
-            return 2*x
-            #return 1/2*x+3/2*y-np.ones(x.shape)
-        elif i == 3:
-            return 2*y
-            #return 3/2*x+1/8*y-3/8*np.ones(x.shape)
+        if self.pols == 'Hermite':
+            if i == 1:
+                return np.ones(x.shape) #Hermite #Laguerre
+            elif i == 2:
+                return 2*x #Hermite
+            elif i == 3:
+                return 2*y #Hermite
+                
+        elif self.pols == 'Laguerre':
+            if i == 1:
+                return np.ones(x.shape) #Hermite #Laguerre
+            elif i == 2:
+                return np.ones(x.shape) - x #Laguerre
+            elif i == 3:
+                return np.ones(x.shape) - y #Laguerre
+        elif self.pols == 'Arbitrary':
+            if i == 1:
+                return -x - y + np.ones(x.shape)
+            elif i == 2:
+                return 1/2*x + 3/2*y - np.ones(x.shape)
+            elif i == 3:
+                return 3/2*x + 1/8*y - 3/8*np.ones(x.shape)
 
     def lap_q(self, x, i):
-        #Hermite and lagrange
         if i == 1:
             return 0
         elif i == 2:
@@ -101,13 +116,30 @@ class terms_uh(object):
             return 0
 
     def grad_q(self, x, y, i):
-        # #Hermite m-1
-        if i == 1:
-            return np.hstack((0, 0)).reshape(1, -1)
-        elif i == 2:
-            return np.hstack((2, 0)).reshape(1, -1)
-        elif i == 3:
-            return np.hstack((0, 2)).reshape(1, -1)
+        if self.pols == 'Hermite':
+            # #Hermite m-1
+            if i == 1:
+                return self.coef_pol*np.hstack((0, 0)).reshape(1, -1) #Hermite #Laguerre
+            elif i == 2:
+                return self.coef_pol*np.hstack((2, 0)).reshape(1, -1) #Hermite
+            elif i == 3:
+                return self.coef_pol*np.hstack((0, 2)).reshape(1, -1) #Hermite
+        elif self.pols == 'Laguerre':
+            # #Hermite m-1
+            if i == 1:
+                return np.hstack((0, 0)).reshape(1, -1) #Hermite #Laguerre
+            elif i == 2:
+                return np.hstack((-1, 0)).reshape(1, -1) #Laguerre
+            elif i == 3:
+                return np.hstack((0, -1)).reshape(1, -1) #Laguerre
+        elif self.pols == 'Arbitrary':
+            # #Hermite m-1
+            if i == 1:
+                return np.hstack((-1, -1)).reshape(1, -1)
+            elif i == 2:
+                return np.hstack((1/2, 3/2)).reshape(1, -1)
+            elif i == 3:
+                return np.hstack((3/2, 1/8)).reshape(1, -1)
 
     def poly_basis(self, M, i):
         return self.q(M[:, 0].reshape(-1, 1), M[:, 1].reshape(-1, 1), i)
@@ -116,13 +148,13 @@ class terms_uh(object):
         col1 = self.poly_basis(self.Mi, 1)
         col2 = self.poly_basis(self.Mi, 2)
         col3 = self.poly_basis(self.Mi, 3)
-        return np.hstack((col1, col2, col3))
+        return self.coef_pol*np.hstack((col1, col2, col3))
 
     def Q2(self):
         col1 = self.poly_basis(self.Mb, 1)
         col2 = self.poly_basis(self.Mb, 2)
         col3 = self.poly_basis(self.Mb, 3)
-        return np.hstack((col1, col2, col3))
+        return self.coef_pol*np.hstack((col1, col2, col3))
 
     def G(self, t):
         if self.exact_solution == "1":
@@ -386,7 +418,7 @@ class solve_matrix(assembled_matrix):
         self.Y = Y
         self.p = (3 - np.sqrt(3))/6
         self.A_tab = np.array([[self.p, 0], [1 - 2*self.p, self.p]])
-        self.b_tab = np.array([1/2, 1/2])
+        self.b_tab = np.array([1/2, 1/2]).reshape(-1,1)
         self.c_tab = np.array([self.p, 1-self.p])
         self.e = np.ones((2, 1))
         self.s = len(self.c_tab)
@@ -402,7 +434,7 @@ class solve_matrix(assembled_matrix):
             ei[i] = 1
             wi = self.grad_am().dot(self.Xk.T).dot(ei) - self.nu * self.lap_am()
             Vi_X = self.Xk.T.dot(self.grad_am()) + \
-                self.G_tilde(tk).T.dot(self.grad_bm())
+                self.G_tilde(tk/2).T.dot(self.grad_bm())
             B1k = ei.T.dot(Y1).dot(Vi_X.T)
             B2k = ei.T.dot(Y2).dot(Vi_X.T)
             yield np.vstack((F1, F2)), wi, np.vstack((B1k, B2k))
@@ -430,12 +462,15 @@ class solve_matrix(assembled_matrix):
             self.x = x
             F1 = self.F_m(Y1, tk, i)
             F2 = self.F_m(Y2, tk, i)
-            Fk = np.vstack((F1, F2))
+            Fk = np.vstack((F1[0], F2[0]))
+            yield Fk
 
-        return np.kron(self.e, self.Xk) + self.dt*np.kron(self.A_tab, np.eye(self.ni)).dot(Fk) - self.Y
-
-    # def step(self, Xk):
-    #     Xk1 = Xk + self.dt*(np.kron(self.b.T, np.eye(self.ni))).dot(self)
+    def step(self, tk):
+        F = np.vstack(tuple(self.Xk1(self.Y, tk)))
+        Fk = np.zeros(F.shape)
+        Fk[:int(F.shape[0]/2), :] = F[::2,:]
+        Fk[int(F.shape[0]/2):, :] = F[1::2,:]
+        return self.Xk + self.dt*(np.kron(self.b_tab.T, np.eye(self.ni))).dot(Fk)
 
 
 # class inexact_Newthon(assembled_matrix):

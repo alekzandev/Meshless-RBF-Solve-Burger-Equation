@@ -28,19 +28,21 @@ class explicit_RungeKutta(object):
                            + 2*self.f(t + self.dt/2, self.stage2(t), self.uh)
                            + 2*self.f(t + self.dt/2, self.stage3(t), self.uh)
                            + self.f(t + self.dt, self.stage4(t), self.uh))
-
+    
     def step(self):
-        u_n = self.u0
+        u_n = self.u0.round(4)
         yield u_n
         d_round = len(str(self.dt).split('.')[-1])
         solution = exact_solution(self.uh.Mi, self.uh.nu)
         for t in self.timegrid[1:]:
             t = round(t, d_round)
-            u_n = self.stagef(t)
+            u_n = self.stagef(t)#.round(6)
             self.u0 = u_n
-            u = solution.u(t)
-            error = np.mean(abs(u-u_n)/u)*100
-            print("t={}  error={:.4f}%".format(t, error))
+            u = solution.u(t)#.round(6)
+            #error = np.mean(abs(u-u_n)/u)*100
+            #print("t={}  error={:.4f}%".format(t, error))
+            error = np.linalg.norm(u-u_n)/np.linalg.norm(u)*100
+            print("t={}  error={:.12f}%".format(t, error))
             yield u_n
 
     def solve(self):
