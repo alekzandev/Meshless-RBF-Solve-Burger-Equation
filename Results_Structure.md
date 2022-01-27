@@ -9,7 +9,7 @@
         "boundary": "Boundary collocation points (list)"
     },
     "solution": {
-        "x.x": "Solution ON interior collocation points at time x.0 (list)"
+        "x.x": "Solution on interior collocation points at time x.x (list)"
     }
 }
 ```
