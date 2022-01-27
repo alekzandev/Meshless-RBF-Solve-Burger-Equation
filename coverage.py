@@ -4,11 +4,15 @@ from halton_points import HaltonPoints
 import numpy as np
 import pandas as pd
 import json
+import os
 # %%
 
 def gen_sol(dim, points, nu, t):
     points_generator = HaltonPoints(dim, points)
     X = points_generator.haltonPoints()
+    df_X = pd.DataFrame(X)
+    df_sort = df_X[[0]].reset_index()
+    df_sort.columns = ['index', 'x']
     np.random.seed(936)
     solution_generator = exact_solution(X, nu)
     U = solution_generator.u(t)
@@ -30,35 +34,29 @@ def gen_sol(dim, points, nu, t):
 
     complete = pd.concat([wave, all])
     complete.columns = ['x', 'y', 'u', 'v', 'u_h', 'v_h']
-    
-    return complete[['x', 'y']].values.tolist(), complete[['u_h', 'v_h']].values.tolist()
+    complete = complete.merge(df_sort, on='x')
+    complete = complete.sort_values(by='index')
+    domain = complete[['x', 'y']].values
+    sols = complete[['u_h', 'v_h']].values
+    print(np.linalg.norm(sols - complete[['u', 'v']].values, axis=0)/np.linalg.norm(complete[['u', 'v']].values, axis=0) * 100)
+    return domain.tolist(), sols.tolist()
 
-def build_dict_solutions(dim, points, nu, poly, rbf):  
-    # solutions = {
-    #     'poly': '',
-    #     'nu': '',
-    #     'rbf': '',
-    #     'points': '',
-    #     'solution': '',
-    # }
+def build_dict_solutions(dim, points, nu, poly, rbf):
     solutions = dict()
     solutions['poly'] = poly
     solutions['nu'] = nu
     solutions['RBF'] = rbf
-    solutions['points'] = {
-        'points': {
-            'Interior': points
-        }
-    }
     solutions['solution'] = dict()
-    for i in range(1,200):
-        t = i/100
-        solutions['solution'][str(t)] = gen_sol(dim, points, nu, t)
+    for i in range(11):
+        t = i/10
+        X, U = gen_sol(dim, points, nu, t)
+        solutions['points'] = {'Interior': X}
+        solutions['solution'][str(t)] = U
     return solutions
 
-r = build_dict_solutions(dim=2, points=52, nu=0.01, poly='hermite', rbf='TPS')
+r = build_dict_solutions(dim=2, points=512, nu=0.001, poly='hermite', rbf='TPS')
 name = 'test.json'
-with open(name, 'w') as f:
+with open(os.path.join(os.getcwd(), 'data/simulations/' + name), 'w') as f:
     json.dump(r, f)
 
 
