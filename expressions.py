@@ -86,26 +86,27 @@ class terms_uh(object):
     def q(self, x, y, i):
         if self.pols == 'Hermite':
             if i == 1:
-                return np.ones(x.shape) #Hermite #Laguerre
+                return np.ones(x.shape)  # Hermite #Laguerre
             elif i == 2:
-                return 2*x #Hermite
+                return 2*x  # Hermite
             elif i == 3:
-                return 2*y #Hermite
-                
+                return 2*y  # Hermite
+
         elif self.pols == 'Laguerre':
             if i == 1:
-                return np.ones(x.shape) #Hermite #Laguerre
+                return np.ones(x.shape)  # Hermite #Laguerre
             elif i == 2:
-                return np.ones(x.shape) - x #Laguerre
+                return np.ones(x.shape) - x  # Laguerre
             elif i == 3:
-                return np.ones(x.shape) - y #Laguerre
+                return np.ones(x.shape) - y  # Laguerre
+
         elif self.pols == 'Arbitrary':
             if i == 1:
-                return -x - y + np.ones(x.shape)
+                return -x - 0.5*y + np.ones(x.shape)
             elif i == 2:
-                return 1/2*x + 3/2*y - np.ones(x.shape)
+                return 3/4*x + -y + 0.5*np.ones(x.shape)
             elif i == 3:
-                return 3/2*x + 1/8*y - 3/8*np.ones(x.shape)
+                return -x + np.ones(x.shape)
 
     def lap_q(self, x, i):
         if i == 1:
@@ -119,27 +120,30 @@ class terms_uh(object):
         if self.pols == 'Hermite':
             # #Hermite m-1
             if i == 1:
-                return self.coef_pol*np.hstack((0, 0)).reshape(1, -1) #Hermite #Laguerre
+                # Hermite #Laguerre
+                return self.coef_pol*np.hstack((0, 0)).reshape(1, -1)
             elif i == 2:
-                return self.coef_pol*np.hstack((2, 0)).reshape(1, -1) #Hermite
+                # Hermite
+                return self.coef_pol*np.hstack((2, 0)).reshape(1, -1)
             elif i == 3:
-                return self.coef_pol*np.hstack((0, 2)).reshape(1, -1) #Hermite
+                # Hermite
+                return self.coef_pol*np.hstack((0, 2)).reshape(1, -1)
         elif self.pols == 'Laguerre':
             # #Hermite m-1
             if i == 1:
-                return np.hstack((0, 0)).reshape(1, -1) #Hermite #Laguerre
+                return np.hstack((0, 0)).reshape(1, -1)  # Hermite #Laguerre
             elif i == 2:
-                return np.hstack((-1, 0)).reshape(1, -1) #Laguerre
+                return np.hstack((-1, 0)).reshape(1, -1)  # Laguerre
             elif i == 3:
-                return np.hstack((0, -1)).reshape(1, -1) #Laguerre
+                return np.hstack((0, -1)).reshape(1, -1)  # Laguerre
         elif self.pols == 'Arbitrary':
             # #Hermite m-1
             if i == 1:
-                return np.hstack((-1, -1)).reshape(1, -1)
+                return np.hstack((-1, -0.5)).reshape(1, -1)
             elif i == 2:
-                return np.hstack((1/2, 3/2)).reshape(1, -1)
+                return np.hstack((3/4, -1)).reshape(1, -1)
             elif i == 3:
-                return np.hstack((3/2, 1/8)).reshape(1, -1)
+                return np.hstack((-1, 0)).reshape(1, -1)
 
     def poly_basis(self, M, i):
         return self.q(M[:, 0].reshape(-1, 1), M[:, 1].reshape(-1, 1), i)
@@ -418,7 +422,7 @@ class solve_matrix(assembled_matrix):
         self.Y = Y
         self.p = (3 - np.sqrt(3))/6
         self.A_tab = np.array([[self.p, 0], [1 - 2*self.p, self.p]])
-        self.b_tab = np.array([1/2, 1/2]).reshape(-1,1)
+        self.b_tab = np.array([1/2, 1/2]).reshape(-1, 1)
         self.c_tab = np.array([self.p, 1-self.p])
         self.e = np.ones((2, 1))
         self.s = len(self.c_tab)
@@ -468,8 +472,8 @@ class solve_matrix(assembled_matrix):
     def step(self, tk):
         F = np.vstack(tuple(self.Xk1(self.Y, tk)))
         Fk = np.zeros(F.shape)
-        Fk[:int(F.shape[0]/2), :] = F[::2,:]
-        Fk[int(F.shape[0]/2):, :] = F[1::2,:]
+        Fk[:int(F.shape[0]/2), :] = F[::2, :]
+        Fk[int(F.shape[0]/2):, :] = F[1::2, :]
         return self.Xk + self.dt*(np.kron(self.b_tab.T, np.eye(self.ni))).dot(Fk)
 
 

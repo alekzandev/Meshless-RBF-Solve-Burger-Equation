@@ -1,7 +1,7 @@
 import numpy as np
 
-from explicit_RK import *
-from expressions import *
+#from explicit_RK import *
+#from expressions import *
 
 
 def Fm(t, X0, uh):
@@ -10,6 +10,14 @@ def Fm(t, X0, uh):
         uh.x = xn
         F.append(uh.F_m(X0, t, i)[0])
     return np.vstack(F)
+
+
+def FDM_time(timegrid, Xi, uh):
+    solution = dict()
+    for dt in timegrid:
+        solution[dt] = Xi
+        Xi = Xi + dt*Fm(dt, Xi, uh)
+    return solution
 
 # Mb = np.array([
 #     #[0., 0.],
@@ -30,14 +38,6 @@ def Fm(t, X0, uh):
 #     #[1/6, 1],
 #     #[1/4, 0]
 # ])
-
-
-def FDM_time(timegrid, Xi, uh):
-    solution = dict()
-    for dt in timegrid:
-        solution[dt] = Xi
-        Xi = Xi + dt*Fm(dt, Xi, uh)
-    return solution
 
 
 # print('X0')
