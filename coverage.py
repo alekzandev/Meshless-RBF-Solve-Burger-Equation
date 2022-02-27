@@ -62,3 +62,26 @@ with open(os.path.join(os.getcwd(), 'data/simulations/' + name), 'w') as f:
 
 
 # %%
+path = 'data/simulations/solution_TPS_Mi_500_Mb_52_nu_0.01_Hermite.json'
+with open(path, 'r') as f:
+    r = json.load(f)
+# %%
+r.keys()
+# %%
+np.array(r['points']['Interior']).shape
+# %%
+exact_solution(np.array(r['points']['Interior']), r['nu']).u(0.5)
+# %%
+for t in r['solution'].keys():
+    us = exact_solution(np.array(r['points']['Interior']), r['nu']).u(float(t))
+# %%
+us
+
+# %%
+uh = np.array(r['solution']['1.0'])
+# %%
+np.linalg.norm(uh - us, axis=0)/np.linalg.norm(us, axis=0) * 100
+
+# %%
+r
+# %%
