@@ -1,7 +1,9 @@
 # %%
+from distutils.command.build import build
 import json
 import os
 import glob
+from statistics import mode
 from unittest import result
 
 import numpy as np
@@ -13,6 +15,8 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
 from analytical_solution import exact_solution
+
+from PIL import Image
 
 
 
@@ -112,56 +116,130 @@ class results_analysis(object):
         with open(path, 'w+') as f:
             json.dump(self.aprox_solution, f, indent=4)
 
-    def plot_solutions_3D(self, t: str, j: int=0) -> None:
-        fig = make_subplots(rows=1, cols=2, specs=[
+    # def plot_solutions_3D(self, t: str, j: int=0) -> None:
+    #     fig = make_subplots(rows=1, cols=2, specs=[
+    #         [
+    #             {'type': 'surface'},
+    #             {'type': 'surface'}
+    #         ]
+    #     ],
+    #     )
+
+    #     self.z_component(self.uh, t, j)
+    #     self.z_h = self.z
+    #     self.zi_h = self.zi
+    #     self.z_component(self.us, t, j)
+    #     self.z_a = self.z
+    #     self.zi_a = self.zi
+
+    #     fig_h = go.Surface(
+    #         z=self.zi_h,
+    #         x=self.xi,
+    #         y=self.yi,
+    #     )
+
+    #     fig_a = go.Surface(
+    #         z=self.zi_a,
+    #         x=self.xi,
+    #         y=self.yi,
+    #     )
+
+    #     fig.add_trace(fig_h, row=1, col=1)
+    #     fig.add_trace(fig_a, row=1, col=2)
+
+    #     fig.update_traces(contours_z=dict(
+    #         show=True,
+    #         usecolormap=True,
+    #         highlightcolor="limegreen",
+    #         project_z=True
+    #     ),
+    #     colorscale='jet',
+    #     )
+
+    #     fig.update_layout(
+    #         title=f'Solution at t={t}',
+    #         scene=dict(
+    #             xaxis_title='x',
+    #             yaxis_title='y',
+    #             zaxis_title='u',
+    #             aspectratio=dict(x=1, y=1, z=0.7),
+    #             #camera_eye=dict(x=0, y=0, z=1),
+    #         ),
+    #         width=1000,
+    #         margin = dict(
+    #             l=0,
+    #             r=0,
+    #             b=10,
+    #             t=50
+    #         ),
+    #     )
+    #     self.image = fig
+    #     fig.show()
+
+    def plot_solutions_3D(self, t: str, j: int=0, type: str='numerical') -> None:
+        fig = make_subplots(rows=1, cols=1, specs=[
             [
                 {'type': 'surface'},
-                {'type': 'surface'}
+                #{'type': 'surface'}
             ]
         ],
         )
+        self.type = type
+        self.comp = j
+        if self.type == 'analytical':
+            color_bar = False
+            self.z_component(self.us, t, j)
+            self.z_a = self.z
+            self.zi_a = self.zi
 
-        self.z_component(self.uh, t, j)
-        self.z_h = self.z
-        self.zi_h = self.zi
-        self.z_component(self.us, t, j)
-        self.z_a = self.z
-        self.zi_a = self.zi
-
-        fig_h = go.Surface(
-            z=self.zi_h,
-            x=self.xi,
-            y=self.yi,
-        )
-
-        fig_a = go.Surface(
-            z=self.zi_a,
-            x=self.xi,
-            y=self.yi,
-        )
-
-        fig.add_trace(fig_h, row=1, col=1)
-        fig.add_trace(fig_a, row=1, col=2)
-
+            fig_a = go.Surface(
+                z=self.zi_a,
+                x=self.xi,
+                y=self.yi,
+            )
+            fig.add_trace(fig_a, row=1, col=1)
+        
+        elif self.type == 'numerical':
+            color_bar = True
+            self.z_component(self.uh, t, j)
+            self.z_h = self.z
+            self.zi_h = self.zi
+        
+            fig_h = go.Surface(
+                z=self.zi_h,
+                x=self.xi,
+                y=self.yi,
+            )
+            fig.add_trace(fig_h, row=1, col=1)
+        
+        
         fig.update_traces(contours_z=dict(
             show=True,
             usecolormap=True,
             highlightcolor="limegreen",
-            project_z=True
+            project_z=True,
         ),
         colorscale='jet',
+        colorbar=dict(
+            lenmode='fraction',
+            len=0.5,
+            orientation='v',
+        ),
+        showscale=color_bar,
         )
 
         fig.update_layout(
-            title=f'Solution at t={t}',
+            #title=f'Solution at t={t}',
             scene=dict(
                 xaxis_title='x',
                 yaxis_title='y',
                 zaxis_title='u',
-                aspectratio=dict(x=1, y=1, z=0.7),
-                #camera_eye=dict(x=0, y=0, z=1),
+                #aspectratio=dict(x=1, y=1, z=0.7),
+                camera_center = dict(x=0.5, y=0.5, z=0),
+                camera_eye=dict(x=2.5, y=2.5, z=1.5),
             ),
-            width=1000,
+            width=600,
+            height=600,
             margin = dict(
                 l=0,
                 r=0,
@@ -172,6 +250,14 @@ class results_analysis(object):
         self.image = fig
         fig.show()
 
+class build_images(results_analysis):
+
+    def save_image(self, file: str, t: str) -> None:
+        path = os.path.join(os.getcwd(), file)
+        name = path.split('simulations')[-1].split('.json')[0].replace('/', '_')[1:].split('_')
+        name = name[0] + '_' + name[1] + '_' + name[-1] + '_' + t + '_' + self.type + '_' + str(self.comp) +'.png'
+        path_im = os.path.join(os.getcwd(), 'data/images', name)
+        self.image.write_image(path_im)
 
 # %% Build solutions
 files = sorted(glob.glob(os.path.join(os.getcwd(), 'data/simulations/' + '*.json')), key=os.path.getsize)
@@ -190,17 +276,41 @@ for path in files[-3:]:
 # ------------------------------------------------------------------------------------------------------------
 
 # %%Compare results
-path = os.path.join(os.getcwd(), 'data/simulations/TPS/500_52_0.01.json')
 
+file = 'data/simulations/TPS/Arbitrary/500_52_0.01.json'
+path = os.path.join(os.getcwd(), file)
 with open(path, 'r') as f:
     result = json.load(f)
 
-simulation = results_analysis(result=result)
+simulation = build_images(result=result)
 simulation.make_grid()
 simulation.build_dict_analytical_solution()
-simulation.plot_solutions_3D('0.2', j=0)
-simulation.image.write_image('image.png')
+timegrid = ['0.1', '0.5', '0.8']
+typeu = ['analytical', 'numerical']
+comp = [0, 1]
+
+for t in timegrid:
+    for typ in typeu:
+        for j in comp:
+            simulation.plot_solutions_3D(t, j, typ)
+            simulation.save_image(file, t)
 # ------------------------------------------------------------------------------------------------------------
+
+#%%
+t = '0.8'
+name_im1 = 'data/images/TPS_Arbitrary_0.01' + '_' + t + '_analytical_0' + '.png'
+name_im2 = 'data/images/TPS_Arbitrary_0.01' + '_' + t + '_numerical_0' + '.png'
+
+image1 = Image.open(name_im1)
+image2 = Image.open(name_im2)
+new_image = Image.new('RGB', (2*image1.width, image1.height), (255, 255, 255))
+new_image.paste(image1, (0, 0))
+new_image.paste(image2, (image1.width, 0))
+new_image.show()
+
+
+
+# %%
 
 # simulation.plot()
 # us = simulation.us['1.0']
