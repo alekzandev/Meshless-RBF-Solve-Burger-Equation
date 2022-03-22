@@ -289,7 +289,7 @@ class build_images(results_analysis):
 
 # %%Compare results
 
-file = 'data/simulations/TPS/Hermite/500_52_0.01.json'
+file = 'data/simulations/MQ/500_52_0.01.json'
 path = os.path.join(os.getcwd(), file)
 with open(path, 'r') as f:
     result = json.load(f)
@@ -311,16 +311,28 @@ for t in timegrid:
 
 #%%
 
+file = 'data/simulations/MQ/500_52_0.01.json'
+path = os.path.join(os.getcwd(), file)
+with open(path, 'r') as f:
+    result = json.load(f)
+
+simulation = build_images(result=result)
+simulation.make_grid()
+simulation.build_dict_analytical_solution()
+#%%
+
 nu = '0.01'
-comp = '1'
-pol = 'Hermite'
+comp = '0'
+pol = 'MQ'
 
 for t in ['0.1', '0.5', '1.0']:
 
     img_path = os.path.join(os.getcwd(), f'data/images/{pol}')
 
-    name_im1 = f'data/images/TPS_{pol}_{nu}_{t}_analytical_{comp}.png'
-    name_im2 = f'data/images/TPS_{pol}_{nu}_{t}_numerical_{comp}.png'
+    # name_im1 = f'data/images/TPS_{pol}_{nu}_{t}_analytical_{comp}.png'
+    # name_im2 = f'data/images/TPS_{pol}_{nu}_{t}_numerical_{comp}.png'
+    name_im1 = f'data/images/{pol}_500_{nu}_{t}_analytical_{comp}.png'
+    name_im2 = f'data/images/{pol}_500_{nu}_{t}_numerical_{comp}.png'
 
     image1 = Image.open(name_im1)
     image2 = Image.open(name_im2)
