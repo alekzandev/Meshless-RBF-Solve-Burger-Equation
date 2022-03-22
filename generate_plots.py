@@ -186,6 +186,16 @@ class results_analysis(object):
         )
         self.type = type
         self.comp = j
+        if self.comp == 0:
+            label_ax = 'u'
+            eye_y = 2.1
+            eye_x = 2.5
+            center_y = 0.2
+        else:
+            label_ax = 'v'
+            eye_y = 2.75
+            eye_x = 1.5
+            center_y = 0.3
         if self.type == 'analytical':
             color_bar = False
             self.z_component(self.us, t, j)
@@ -222,30 +232,32 @@ class results_analysis(object):
         colorscale='jet',
         colorbar=dict(
             lenmode='fraction',
-            len=0.5,
+            len=0.8,
             orientation='v',
         ),
         showscale=color_bar,
         )
 
         fig.update_layout(
-            #title=f'Solution at t={t}',
+            #title=f't={t}',
             scene=dict(
                 xaxis_title='x',
                 yaxis_title='y',
-                zaxis_title='u',
-                #aspectratio=dict(x=1, y=1, z=0.7),
-                camera_center = dict(x=0.5, y=0.5, z=0),
-                camera_eye=dict(x=2.5, y=2.5, z=1.5),
+                zaxis_title=label_ax,
+                aspectratio=dict(x=1.5, y=1.5, z=1.),
+                camera_center = dict(x=0.4, y=center_y, z=0.1),
+                camera_eye=dict(x=eye_x, y=eye_y, z=1.5),
             ),
             width=600,
             height=600,
             margin = dict(
                 l=0,
                 r=0,
-                b=10,
-                t=50
+                b=0,
+                t=0,
+                pad=50
             ),
+            #plot_bgcolor='rgb(0,0,0,0)',
         )
         self.image = fig
         fig.show()
@@ -260,24 +272,24 @@ class build_images(results_analysis):
         self.image.write_image(path_im)
 
 # %% Build solutions
-files = sorted(glob.glob(os.path.join(os.getcwd(), 'data/simulations/' + '*.json')), key=os.path.getsize)
-for path in files[-3:]:
-    with open(path, 'r') as f:
-        result = json.load(f)
-    factor = float(input('Factor ' + path + '\t :'))
-    simulation = results_analysis(result=result, factor=factor, path=path)
-    simulation.make_grid()
-    simulation. build_dict_analytical_solution()
+# files = sorted(glob.glob(os.path.join(os.getcwd(), 'data/simulations/' + '*.json')), key=os.path.getsize)
+# for path in files[-3:]:
+#     with open(path, 'r') as f:
+#         result = json.load(f)
+#     factor = float(input('Factor ' + path + '\t :'))
+#     simulation = results_analysis(result=result, factor=factor, path=path)
+#     simulation.make_grid()
+#     simulation. build_dict_analytical_solution()
 
-    simulation.build_dict_errorp2p(type='error')
-    simulation.build_dict_errorp2p(type='delta')
-    simulation.build_dict_final_solution()
-    simulation.tojson()
+#     simulation.build_dict_errorp2p(type='error')
+#     simulation.build_dict_errorp2p(type='delta')
+#     simulation.build_dict_final_solution()
+#     simulation.tojson()
 # ------------------------------------------------------------------------------------------------------------
 
 # %%Compare results
 
-file = 'data/simulations/TPS/Arbitrary/500_52_0.01.json'
+file = 'data/simulations/TPS/Hermite/500_52_0.01.json'
 path = os.path.join(os.getcwd(), file)
 with open(path, 'r') as f:
     result = json.load(f)
@@ -285,11 +297,12 @@ with open(path, 'r') as f:
 simulation = build_images(result=result)
 simulation.make_grid()
 simulation.build_dict_analytical_solution()
-timegrid = ['0.1', '0.5', '0.8']
+timegrid = ['0.1', '0.5', '1.0']
 typeu = ['analytical', 'numerical']
 comp = [0, 1]
 
 for t in timegrid:
+    print(t)
     for typ in typeu:
         for j in comp:
             simulation.plot_solutions_3D(t, j, typ)
@@ -297,16 +310,25 @@ for t in timegrid:
 # ------------------------------------------------------------------------------------------------------------
 
 #%%
-t = '0.8'
-name_im1 = 'data/images/TPS_Arbitrary_0.01' + '_' + t + '_analytical_0' + '.png'
-name_im2 = 'data/images/TPS_Arbitrary_0.01' + '_' + t + '_numerical_0' + '.png'
 
-image1 = Image.open(name_im1)
-image2 = Image.open(name_im2)
-new_image = Image.new('RGB', (2*image1.width, image1.height), (255, 255, 255))
-new_image.paste(image1, (0, 0))
-new_image.paste(image2, (image1.width, 0))
-new_image.show()
+nu = '0.01'
+comp = '1'
+pol = 'Hermite'
+
+for t in ['0.1', '0.5', '1.0']:
+
+    img_path = os.path.join(os.getcwd(), f'data/images/{pol}')
+
+    name_im1 = f'data/images/TPS_{pol}_{nu}_{t}_analytical_{comp}.png'
+    name_im2 = f'data/images/TPS_{pol}_{nu}_{t}_numerical_{comp}.png'
+
+    image1 = Image.open(name_im1)
+    image2 = Image.open(name_im2)
+    new_image = Image.new('RGB', (2*image1.width, image1.height), (255, 255, 255))
+    new_image.paste(image1, (0, 0))
+    new_image.paste(image2, (image1.width, 0))
+    new_image.show()
+    new_image.save(os.path.join(img_path, f'{nu}_{t}_{comp}.png'))
 
 
 
@@ -316,4 +338,7 @@ new_image.show()
 # us = simulation.us['1.0']
 # uh = simulation.aprox_solution['solution']['1.0']
 # print(np.linalg.norm(us - uh, axis=0)/np.linalg.norm(us, axis=0)*100)
+# %%
+simulation.X
+#exact_solution()
 # %%
