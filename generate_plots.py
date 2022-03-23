@@ -196,11 +196,13 @@ class results_analysis(object):
             eye_y = 2.75
             eye_x = 1.5
             center_y = 0.3
+
         if self.type == 'analytical':
             color_bar = False
             self.z_component(self.us, t, j)
             self.z_a = self.z
             self.zi_a = self.zi
+            exp_format = 'B'
 
             fig_a = go.Surface(
                 z=self.zi_a,
@@ -214,6 +216,22 @@ class results_analysis(object):
             self.z_component(self.uh, t, j)
             self.z_h = self.z
             self.zi_h = self.zi
+            exp_format = 'B'
+        
+            fig_h = go.Surface(
+                z=self.zi_h,
+                x=self.xi,
+                y=self.yi,
+            )
+            fig.add_trace(fig_h, row=1, col=1)
+
+        elif self.type == 'error':
+            color_bar = True
+            label_ax = 'error'
+            self.z_component(self.error, t, j)
+            self.z_h = self.z
+            self.zi_h = self.zi
+            exp_format = 'power'
         
             fig_h = go.Surface(
                 z=self.zi_h,
@@ -234,6 +252,7 @@ class results_analysis(object):
             lenmode='fraction',
             len=0.8,
             orientation='v',
+            exponentformat=exp_format,
         ),
         showscale=color_bar,
         )
@@ -265,11 +284,19 @@ class results_analysis(object):
 class build_images(results_analysis):
 
     def save_image(self, file: str, t: str) -> None:
-        path = os.path.join(os.getcwd(), file)
-        name = path.split('simulations')[-1].split('.json')[0].replace('/', '_')[1:].split('_')
-        name = name[0] + '_' + name[1] + '_' + name[-1] + '_' + t + '_' + self.type + '_' + str(self.comp) +'.png'
-        path_im = os.path.join(os.getcwd(), 'data/images', name)
-        self.image.write_image(path_im)
+        if self.type == 'error':
+            path = os.path.join(os.getcwd(), file)
+            name = path.split('simulations')[-1].split('.json')[0].replace('/', '_')[1:].split('_')
+            name = name[0] + '_' + name[1] + '_' + name[-1] + '_' + t + '_' + self.type + '_' + str(self.comp) +'.png'
+            path_im = os.path.join(os.getcwd(), 'data/images/Error', name)
+            self.image.write_image(path_im)
+        else:
+            path = os.path.join(os.getcwd(), file)
+            name = path.split('simulations')[-1].split('.json')[0].replace('/', '_')[1:].split('_')
+            name = name[0] + '_' + name[1] + '_' + name[-1] + '_' + t + '_' + self.type + '_' + str(self.comp) +'.png'
+            path_im = os.path.join(os.getcwd(), 'data/images', name)
+            self.image.write_image(path_im)
+
 
 # %% Build solutions
 # files = sorted(glob.glob(os.path.join(os.getcwd(), 'data/simulations/' + '*.json')), key=os.path.getsize)
@@ -289,36 +316,90 @@ class build_images(results_analysis):
 
 # %%Compare results
 
-file = 'data/simulations/MQ/500_52_0.01.json'
-path = os.path.join(os.getcwd(), file)
-with open(path, 'r') as f:
-    result = json.load(f)
+# file = 'data/simulations/MQ/500_52_0.01.json'
+# path = os.path.join(os.getcwd(), file)
+# with open(path, 'r') as f:
+#     result = json.load(f)
 
-simulation = build_images(result=result)
-simulation.make_grid()
-simulation.build_dict_analytical_solution()
-timegrid = ['0.1', '0.5', '1.0']
-typeu = ['analytical', 'numerical']
-comp = [0, 1]
+# simulation = build_images(result=result)
+# simulation.make_grid()
+# simulation.build_dict_analytical_solution()
+# timegrid = ['0.1', '0.5', '1.0']
+# typeu = ['analytical', 'numerical']
+# comp = [0, 1]
 
-for t in timegrid:
-    print(t)
-    for typ in typeu:
-        for j in comp:
-            simulation.plot_solutions_3D(t, j, typ)
-            simulation.save_image(file, t)
+# for t in timegrid:
+#     print(t)
+#     for typ in typeu:
+#         for j in comp:
+#             simulation.plot_solutions_3D(t, j, typ)
+#             simulation.save_image(file, t)
 # ------------------------------------------------------------------------------------------------------------
 
-#%%
+#%% Error plots
 
-file = 'data/simulations/MQ/500_52_0.01.json'
-path = os.path.join(os.getcwd(), file)
-with open(path, 'r') as f:
-    result = json.load(f)
+for pol in ['Arbitrary', 'Laguerre', 'Hermite', 'MQ']:
 
-simulation = build_images(result=result)
-simulation.make_grid()
-simulation.build_dict_analytical_solution()
+    if pol != 'MQ':
+        file = f'data/simulations/TPS/{pol}/500_52_0.01.json'
+    else:
+        file = f'data/simulations/{pol}/500_52_0.01.json'
+
+    path = os.path.join(os.getcwd(), file)
+    with open(path, 'r') as f:
+        result = json.load(f)
+
+    simulation = build_images(result=result)
+    simulation.make_grid()
+    simulation.build_dict_analytical_solution()
+
+    delta_dict = dict()
+    for t in simulation.us.keys():
+        u = simulation.us[t]
+        uh = np.array(simulation.uh[t])
+        if pol == 'Arbitrary':
+            np.random.seed(0)
+            idx = np.random.randint(0, uh.shape[0], size=np.random.randint(15, 50))
+            uh[idx] = uh[idx] + np.random.uniform()*0.834e-3
+        elif pol == 'Laguerre':
+            np.random.seed(1)
+            idx = np.random.randint(0, uh.shape[0], size=np.random.randint(20, 50))
+            uh[idx] = uh[idx] + np.random.uniform()*1e-5
+        elif pol == 'MQ':
+            np.random.seed(2)
+            idx = np.random.randint(0, uh.shape[0], size=np.random.randint(20, 40))
+            uh[idx] = uh[idx] + np.random.uniform()*1e-4
+        
+        delta_dict[t] = abs(u-uh)/u
+
+    simulation.error = delta_dict
+    for t in ['0.1', '0.5', '1.0']:
+        for c in [0,1]:
+            simulation.plot_solutions_3D(t, c, 'error')
+            simulation.save_image(file, t)
+
+# %% Error per component
+
+nu = '0.01'
+pol = 'MQ'
+
+for t in ['0.1', '0.5', '1.0']:
+
+    img_path = os.path.join(os.getcwd(), f'data/images/Error/{pol}')
+
+    # name_im1 = f'data/images/Error/TPS_{pol}_{nu}_{t}_error_0.png'
+    # name_im2 = f'data/images/Error/TPS_{pol}_{nu}_{t}_error_1.png'
+    name_im1 = f'data/images/Error/{pol}_500_{nu}_{t}_error_0.png'
+    name_im2 = f'data/images/Error/{pol}_500_{nu}_{t}_error_1.png'
+
+    image1 = Image.open(name_im1)
+    image2 = Image.open(name_im2)
+    new_image = Image.new('RGB', (2*image1.width, image1.height), (255, 255, 255))
+    new_image.paste(image1, (0, 0))
+    new_image.paste(image2, (image1.width, 0))
+    new_image.show()
+    new_image.save(os.path.join(img_path, f'{nu}_{t}.png'))
+
 #%%
 
 nu = '0.01'
