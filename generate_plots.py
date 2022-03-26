@@ -188,13 +188,13 @@ class results_analysis(object):
         self.comp = j
         if self.comp == 0:
             label_ax = 'u'
-            eye_y = 2.1
-            eye_x = 2.5
+            eye_y = -3#2.1
+            eye_x = -1.5#2.5
             center_y = 0.2
         else:
             label_ax = 'v'
-            eye_y = 2.75
-            eye_x = 1.5
+            eye_y = -2.75
+            eye_x = -1.5
             center_y = 0.3
 
         if self.type == 'analytical':
@@ -264,7 +264,7 @@ class results_analysis(object):
                 yaxis_title='y',
                 zaxis_title=label_ax,
                 aspectratio=dict(x=1.5, y=1.5, z=1.),
-                camera_center = dict(x=0.4, y=center_y, z=0.1),
+                camera_center = dict(x=-0.1, y=center_y, z=0.1),
                 camera_eye=dict(x=eye_x, y=eye_y, z=1.5),
             ),
             width=600,
@@ -316,24 +316,24 @@ class build_images(results_analysis):
 
 # %%Compare results
 
-# file = 'data/simulations/MQ/500_52_0.01.json'
-# path = os.path.join(os.getcwd(), file)
-# with open(path, 'r') as f:
-#     result = json.load(f)
+file = 'data/simulations/MQ/500_52_0.01.json'
+path = os.path.join(os.getcwd(), file)
+with open(path, 'r') as f:
+    result = json.load(f)
 
-# simulation = build_images(result=result)
-# simulation.make_grid()
-# simulation.build_dict_analytical_solution()
-# timegrid = ['0.1', '0.5', '1.0']
-# typeu = ['analytical', 'numerical']
-# comp = [0, 1]
+simulation = build_images(result=result)
+simulation.make_grid()
+simulation.build_dict_analytical_solution()
+timegrid = ['0.5']#['0.1', '0.5', '1.0']
+typeu = ['numerical']#['analytical', 'numerical']
+comp = [1]#[0, 1]
 
-# for t in timegrid:
-#     print(t)
-#     for typ in typeu:
-#         for j in comp:
-#             simulation.plot_solutions_3D(t, j, typ)
-#             simulation.save_image(file, t)
+for t in timegrid:
+    print(t)
+    for typ in typeu:
+        for j in comp:
+            simulation.plot_solutions_3D(t, j, typ)
+            #simulation.save_image(file, t)
 # ------------------------------------------------------------------------------------------------------------
 
 #%% Error plots
@@ -420,7 +420,6 @@ for t in ['0.1', '0.5', '1.0']:
     new_image = Image.new('RGB', (2*image1.width, image1.height), (255, 255, 255))
     new_image.paste(image1, (0, 0))
     new_image.paste(image2, (image1.width, 0))
-    new_image.show()
     new_image.save(os.path.join(img_path, f'{nu}_{t}_{comp}.png'))
 
 
