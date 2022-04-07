@@ -1,0 +1,19 @@
+# %%
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+#%%
+t = np.linspace(0, 1, 11)[1:]
+x_arb = np.array([1.3, 2.1, 2.6, 3.2, 3.5, 3.7, 3.9, 4.1, 4.13, 4.2])*2.3e-3
+x_lag = np.array([1.3, 2.1, 2.6, 3.2, 3.5, 3.7, 3.9, 4.1, 4.13, 4.2])*1.e-3
+x_herm = np.array([2.3, 2.9, 3.1, 3.2, 3.5, 3.7, 3.9, 4.1, 4.13, 4.2])*3.2e-4
+x_mq = np.array([2.6, 2.9, 3.1, 3.2, 3.5, 3.55, 3.6, 4.1, 4.13, 4.2])*5.5e-4
+
+df = pd.DataFrame({'Arbitrarios': x_arb, 'Laguerre': x_lag, 'Hermite': x_herm, 'MQ': x_mq})
+
+plt.subplots(figsize=(15,15))
+sns.lineplot(data= df)
+plt.yscale('log')
+# %%

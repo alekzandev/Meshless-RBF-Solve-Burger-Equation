@@ -1,4 +1,5 @@
 # %%
+from cmath import inf
 from distutils.command.build import build
 import json
 import os
@@ -314,6 +315,24 @@ class build_images(results_analysis):
 #     simulation.tojson()
 # ------------------------------------------------------------------------------------------------------------
 
+# %% Norms
+nu = 0.02
+pol = 'Hermite'
+file = f'data/simulations/TPS/{pol}/500_52_{nu}.json'
+path = os.path.join(os.getcwd(), file)
+with open(path, 'r') as f:
+    result = json.load(f)
+
+simulation = results_analysis(result=result, path=path)
+simulation.build_dict_analytical_solution()
+
+t = '1.0'
+e2 = np.linalg.norm(np.array(simulation.uh[t]) - simulation.us[t], axis=0)/np.linalg.norm(simulation.us[t], axis=0)
+einf = np.linalg.norm(np.array(simulation.uh[t]) - simulation.us[t], np.inf, axis=0)/np.linalg.norm(simulation.us[t], np.inf, axis=0)
+print(f'Time: {t} \t Nu: {nu} \t {pol} \n')
+for e2_, einf_, c in zip(e2, einf, ['u', 'v']):
+    print(f'Component {c}:')
+    print('L2: {:.4e} \t Linf: {:,.4e}'.format(e2_, einf_))
 # %%Compare results
 
 file = 'data/simulations/MQ/500_52_0.01.json'
@@ -324,9 +343,9 @@ with open(path, 'r') as f:
 simulation = build_images(result=result)
 simulation.make_grid()
 simulation.build_dict_analytical_solution()
-timegrid = ['0.5']#['0.1', '0.5', '1.0']
-typeu = ['numerical']#['analytical', 'numerical']
-comp = [1]#[0, 1]
+timegrid = ['0.1', '0.5', '1.0']
+typeu = ['analytical', 'numerical']
+comp = [0, 1]
 
 for t in timegrid:
     print(t)
@@ -376,7 +395,7 @@ for pol in ['Arbitrary', 'Laguerre', 'Hermite', 'MQ']:
     for t in ['0.1', '0.5', '1.0']:
         for c in [0,1]:
             simulation.plot_solutions_3D(t, c, 'error')
-            simulation.save_image(file, t)
+            #simulation.save_image(file, t)
 
 # %% Error per component
 
@@ -398,7 +417,7 @@ for t in ['0.1', '0.5', '1.0']:
     new_image.paste(image1, (0, 0))
     new_image.paste(image2, (image1.width, 0))
     new_image.show()
-    new_image.save(os.path.join(img_path, f'{nu}_{t}.png'))
+    #new_image.save(os.path.join(img_path, f'{nu}_{t}.png'))
 
 #%%
 
@@ -420,7 +439,7 @@ for t in ['0.1', '0.5', '1.0']:
     new_image = Image.new('RGB', (2*image1.width, image1.height), (255, 255, 255))
     new_image.paste(image1, (0, 0))
     new_image.paste(image2, (image1.width, 0))
-    new_image.save(os.path.join(img_path, f'{nu}_{t}_{comp}.png'))
+    #new_image.save(os.path.join(img_path, f'{nu}_{t}_{comp}.png'))
 
 
 
