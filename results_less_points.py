@@ -1,28 +1,16 @@
+#!bin/bash/python
 # %%
-from cmath import inf
-from distutils.command.build import build
 import json
 import os
-import glob
-from statistics import mode
-from unittest import result
-
-import numpy as np
 from scipy.interpolate import griddata
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import numpy as np
+from analytical_solution import exact_solution
 import matplotlib.pyplot as plt
-
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
-from analytical_solution import exact_solution
-
-from PIL import Image
-import pandas as pd
-import seaborn as sns
-
-
-
+# %%
 class results_analysis(object):
     
     def __init__(self, result: dict, factor: float = 1.0, path: str=None) -> None:
@@ -301,26 +289,13 @@ class build_images(results_analysis):
             self.image.write_image(path_im)
 
 
-# %% Build solutions
-# files = sorted(glob.glob(os.path.join(os.getcwd(), 'data/simulations/' + '*.json')), key=os.path.getsize)
-# for path in files[-3:]:
-#     with open(path, 'r') as f:
-#         result = json.load(f)
-#     factor = float(input('Factor ' + path + '\t :'))
-#     simulation = results_analysis(result=result, factor=factor, path=path)
-#     simulation.make_grid()
-#     simulation. build_dict_analytical_solution()
-
-#     simulation.build_dict_errorp2p(type='error')
-#     simulation.build_dict_errorp2p(type='delta')
-#     simulation.build_dict_final_solution()
-#     simulation.tojson()
-# ------------------------------------------------------------------------------------------------------------
-
-# %% Norms
-nu = 0.001
+# %%
+nu = 0.01
 pol = 'Hermite'
-file = f'data/simulations/TPS/{pol}/500_52_{nu}.json'
+RBF = 'TPS'
+Mi = 80
+Mb = 52
+file = f'data/simulations/solution_{RBF}_Mi_{Mi}_Mb_{Mb}_nu_{nu}_{pol}.json'
 path = os.path.join(os.getcwd(), file)
 with open(path, 'r') as f:
     result = json.load(f)
@@ -328,7 +303,7 @@ with open(path, 'r') as f:
 simulation = results_analysis(result=result, path=path)
 simulation.build_dict_analytical_solution()
 
-t = '1.0'
+t = '0.1'
 e2 = np.linalg.norm(np.array(simulation.uh[t]) - simulation.us[t], axis=0)/np.linalg.norm(simulation.us[t], axis=0)
 einf = np.linalg.norm(np.array(simulation.uh[t]) - simulation.us[t], np.inf, axis=0)/np.linalg.norm(simulation.us[t], np.inf, axis=0)
 print(f'Time: {t} \t Nu: {nu} \t {pol} \n')
@@ -336,175 +311,4 @@ for e2_, einf_, c in zip(e2, einf, ['u', 'v']):
     print(f'Component {c}:')
     print('L2: {:.4e} \t Linf: {:,.4e}'.format(e2_, einf_))
 
-# %% Plot error vs time
-nu = 0.02
-df = pd.DataFrame()
-for pol in  ['Arbitrary', 'Laguerre', 'Hermite', 'MQ']:
-    if pol != 'MQ':
-        file = f'data/simulations/TPS/{pol}/500_52_{nu}.json'
-        path = os.path.join(os.getcwd(), file)
-        with open(path, 'r') as f:
-            result = json.load(f)
-
-        simulation = results_analysis(result=result, path=path)
-        simulation.build_dict_analytical_solution()
-
-        vect_sol2 = np.array([[], [], []]).reshape(-1,3)
-        vect_solinf = np.array([[], [], []]).reshape(-1,3)
-        for t in ['0.1', '0.2', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '1.0']:
-            e2 = np.linalg.norm(np.array(simulation.uh[t]) - simulation.us[t], axis=0)/np.linalg.norm(simulation.us[t], axis=0)
-            einf = np.linalg.norm(np.array(simulation.uh[t]) - simulation.us[t], np.inf, axis=0)/np.linalg.norm(simulation.us[t], np.inf, axis=0)
-            vect_sol2 = np.vstack((vect_sol2, np.hstack((e2, eval(t)))))
-            vect_solinf = np.vstack((vect_solinf, np.hstack((einf, eval(t)))))
-        auxdf = pd.DataFrame(vect_sol2, columns=['u', 'v', 't'])
-        auxdf['poly'] = f'{pol}'
-        df = pd.concat([df, auxdf])
-    else:
-        file = f'data/simulations/{pol}/500_52_{nu}.json'
-        path = os.path.join(os.getcwd(), file)
-        with open(path, 'r') as f:
-            result = json.load(f)
-
-        simulation = results_analysis(result=result, path=path)
-        simulation.build_dict_analytical_solution()
-
-        vect_sol2 = np.array([[], [], []]).reshape(-1,3)
-        vect_solinf = np.array([[], [], []]).reshape(-1,3)
-        for t in ['0.1', '0.2', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '1.0']:
-            e2 = np.linalg.norm(np.array(simulation.uh[t]) - simulation.us[t], axis=0)/np.linalg.norm(simulation.us[t], axis=0)
-            einf = np.linalg.norm(np.array(simulation.uh[t]) - simulation.us[t], np.inf, axis=0)/np.linalg.norm(simulation.us[t], np.inf, axis=0)
-            vect_sol2 = np.vstack((vect_sol2, np.hstack((e2, eval(t)))))
-            vect_solinf = np.vstack((vect_solinf, np.hstack((einf, eval(t)))))
-        auxdf = pd.DataFrame(vect_sol2, columns=['u', 'v', 't'])
-        auxdf['poly'] = f'{pol}'
-        df = pd.concat([df, auxdf])
-
-
-df = df.reset_index(drop=True)
-plt.subplots(figsize=(15, 15))
-sns.lineplot(data=df, x="t", y='v', hue='poly')
-plt.yscale('log')
-    
-
-
-
-# %%Compare results
-
-file = 'data/simulations/MQ/500_52_0.01.json'
-path = os.path.join(os.getcwd(), file)
-with open(path, 'r') as f:
-    result = json.load(f)
-
-simulation = build_images(result=result)
-simulation.make_grid()
-simulation.build_dict_analytical_solution()
-timegrid = ['0.1', '0.5', '1.0']
-typeu = ['analytical', 'numerical']
-comp = [0, 1]
-
-for t in timegrid:
-    print(t)
-    for typ in typeu:
-        for j in comp:
-            simulation.plot_solutions_3D(t, j, typ)
-            #simulation.save_image(file, t)
-# ------------------------------------------------------------------------------------------------------------
-
-#%% Error plots
-
-for pol in ['Arbitrary', 'Laguerre', 'Hermite', 'MQ']:
-
-    if pol != 'MQ':
-        file = f'data/simulations/TPS/{pol}/500_52_0.01.json'
-    else:
-        file = f'data/simulations/{pol}/500_52_0.01.json'
-
-    path = os.path.join(os.getcwd(), file)
-    with open(path, 'r') as f:
-        result = json.load(f)
-
-    simulation = build_images(result=result)
-    simulation.make_grid()
-    simulation.build_dict_analytical_solution()
-
-    delta_dict = dict()
-    for t in simulation.us.keys():
-        u = simulation.us[t]
-        uh = np.array(simulation.uh[t])
-        if pol == 'Arbitrary':
-            np.random.seed(0)
-            idx = np.random.randint(0, uh.shape[0], size=np.random.randint(15, 50))
-            uh[idx] = uh[idx] + np.random.uniform()*0.834e-3
-        elif pol == 'Laguerre':
-            np.random.seed(1)
-            idx = np.random.randint(0, uh.shape[0], size=np.random.randint(20, 50))
-            uh[idx] = uh[idx] + np.random.uniform()*1e-5
-        elif pol == 'MQ':
-            np.random.seed(2)
-            idx = np.random.randint(0, uh.shape[0], size=np.random.randint(20, 40))
-            uh[idx] = uh[idx] + np.random.uniform()*1e-4
-        
-        delta_dict[t] = abs(u-uh)/u
-
-    simulation.error = delta_dict
-    for t in ['0.1', '0.5', '1.0']:
-        for c in [0,1]:
-            simulation.plot_solutions_3D(t, c, 'error')
-            #simulation.save_image(file, t)
-
-# %% Error per component
-
-nu = '0.01'
-pol = 'MQ'
-
-for t in ['0.1', '0.5', '1.0']:
-
-    img_path = os.path.join(os.getcwd(), f'data/images/Error/{pol}')
-
-    # name_im1 = f'data/images/Error/TPS_{pol}_{nu}_{t}_error_0.png'
-    # name_im2 = f'data/images/Error/TPS_{pol}_{nu}_{t}_error_1.png'
-    name_im1 = f'data/images/Error/{pol}_500_{nu}_{t}_error_0.png'
-    name_im2 = f'data/images/Error/{pol}_500_{nu}_{t}_error_1.png'
-
-    image1 = Image.open(name_im1)
-    image2 = Image.open(name_im2)
-    new_image = Image.new('RGB', (2*image1.width, image1.height), (255, 255, 255))
-    new_image.paste(image1, (0, 0))
-    new_image.paste(image2, (image1.width, 0))
-    new_image.show()
-    #new_image.save(os.path.join(img_path, f'{nu}_{t}.png'))
-
-#%%
-
-nu = '0.01'
-comp = '0'
-pol = 'MQ'
-
-for t in ['0.1', '0.5', '1.0']:
-
-    img_path = os.path.join(os.getcwd(), f'data/images/{pol}')
-
-    # name_im1 = f'data/images/TPS_{pol}_{nu}_{t}_analytical_{comp}.png'
-    # name_im2 = f'data/images/TPS_{pol}_{nu}_{t}_numerical_{comp}.png'
-    name_im1 = f'data/images/{pol}_500_{nu}_{t}_analytical_{comp}.png'
-    name_im2 = f'data/images/{pol}_500_{nu}_{t}_numerical_{comp}.png'
-
-    image1 = Image.open(name_im1)
-    image2 = Image.open(name_im2)
-    new_image = Image.new('RGB', (2*image1.width, image1.height), (255, 255, 255))
-    new_image.paste(image1, (0, 0))
-    new_image.paste(image2, (image1.width, 0))
-    #new_image.save(os.path.join(img_path, f'{nu}_{t}_{comp}.png'))
-
-
-
-# %%
-
-# simulation.plot()
-# us = simulation.us['1.0']
-# uh = simulation.aprox_solution['solution']['1.0']
-# print(np.linalg.norm(us - uh, axis=0)/np.linalg.norm(us, axis=0)*100)
-# %%
-simulation.X
-#exact_solution()
 # %%
