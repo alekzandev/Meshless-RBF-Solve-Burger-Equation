@@ -291,11 +291,12 @@ class build_images(results_analysis):
 
 # %%
 nu = 0.01
-pol = 'Hermite'
-RBF = 'TPS'
+pol = 'MQ'
+RBF = 'MQ'
 Mi = 80
 Mb = 52
-file = f'data/simulations/solution_{RBF}_Mi_{Mi}_Mb_{Mb}_nu_{nu}_{pol}.json'
+#file = f'data/simulations/solution_{RBF}_Mi_{Mi}_Mb_{Mb}_nu_{nu}_{pol}.json'
+file = f'data/simulations/solution_{RBF}_Mi_{Mi}_Mb_{Mb}_nu_{nu}.json'
 path = os.path.join(os.getcwd(), file)
 with open(path, 'r') as f:
     result = json.load(f)
@@ -303,7 +304,7 @@ with open(path, 'r') as f:
 simulation = results_analysis(result=result, path=path)
 simulation.build_dict_analytical_solution()
 
-t = '0.1'
+t = '1.0'
 e2 = np.linalg.norm(np.array(simulation.uh[t]) - simulation.us[t], axis=0)/np.linalg.norm(simulation.us[t], axis=0)
 einf = np.linalg.norm(np.array(simulation.uh[t]) - simulation.us[t], np.inf, axis=0)/np.linalg.norm(simulation.us[t], np.inf, axis=0)
 print(f'Time: {t} \t Nu: {nu} \t {pol} \n')

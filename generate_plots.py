@@ -319,8 +319,9 @@ class build_images(results_analysis):
 
 # %% Norms
 nu = 0.001
-pol = 'Hermite'
-file = f'data/simulations/TPS/{pol}/500_52_{nu}.json'
+pol = 'MQ'
+#file = f'data/simulations/TPS/{pol}/500_52_{nu}.json'
+file = f'data/simulations/{pol}/500_52_{nu}.json'
 path = os.path.join(os.getcwd(), file)
 with open(path, 'r') as f:
     result = json.load(f)
@@ -356,7 +357,7 @@ for pol in  ['Arbitrary', 'Laguerre', 'Hermite', 'MQ']:
             einf = np.linalg.norm(np.array(simulation.uh[t]) - simulation.us[t], np.inf, axis=0)/np.linalg.norm(simulation.us[t], np.inf, axis=0)
             vect_sol2 = np.vstack((vect_sol2, np.hstack((e2, eval(t)))))
             vect_solinf = np.vstack((vect_solinf, np.hstack((einf, eval(t)))))
-        auxdf = pd.DataFrame(vect_sol2, columns=['u', 'v', 't'])
+        auxdf = pd.DataFrame(np.hstack((vect_sol2, vect_solinf)), columns=['u2', 'v2', 't2', 'ui', 'vi', 'ti'])
         auxdf['poly'] = f'{pol}'
         df = pd.concat([df, auxdf])
     else:
@@ -375,14 +376,14 @@ for pol in  ['Arbitrary', 'Laguerre', 'Hermite', 'MQ']:
             einf = np.linalg.norm(np.array(simulation.uh[t]) - simulation.us[t], np.inf, axis=0)/np.linalg.norm(simulation.us[t], np.inf, axis=0)
             vect_sol2 = np.vstack((vect_sol2, np.hstack((e2, eval(t)))))
             vect_solinf = np.vstack((vect_solinf, np.hstack((einf, eval(t)))))
-        auxdf = pd.DataFrame(vect_sol2, columns=['u', 'v', 't'])
+        auxdf = pd.DataFrame(np.hstack((vect_sol2, vect_solinf)), columns=['u2', 'v2', 't2', 'ui', 'vi', 'ti'])
         auxdf['poly'] = f'{pol}'
         df = pd.concat([df, auxdf])
 
 
 df = df.reset_index(drop=True)
 plt.subplots(figsize=(15, 15))
-sns.lineplot(data=df, x="t", y='v', hue='poly')
+sns.lineplot(data=df, x="ti", y='vi', hue='poly')
 plt.yscale('log')
     
 
