@@ -338,9 +338,9 @@ for e2_, einf_, c in zip(e2, einf, ['u', 'v']):
     print('L2: {:.4e} \t Linf: {:,.4e}'.format(e2_, einf_))
 
 # %% Plot error vs time
-nu = 0.02
+nu = 0.001
 df = pd.DataFrame()
-for pol in  ['Arbitrary', 'Laguerre', 'Hermite', 'MQ']:
+for pol in  [ 'Hermite', 'MQ']: #'Arbitrary', 'Laguerre',
     if pol != 'MQ':
         file = f'data/simulations/TPS/{pol}/500_52_{nu}.json'
         path = os.path.join(os.getcwd(), file)
@@ -380,11 +380,18 @@ for pol in  ['Arbitrary', 'Laguerre', 'Hermite', 'MQ']:
         auxdf['poly'] = f'{pol}'
         df = pd.concat([df, auxdf])
 
-
+component = 'v'
+norm_e = '2'
 df = df.reset_index(drop=True)
 plt.subplots(figsize=(15, 15))
-sns.lineplot(data=df, x="ti", y='vi', hue='poly')
+sns.lineplot(data=df, x="ti", y=f'{component}{norm_e}', hue='poly')
 plt.yscale('log')
+plt.xticks(fontsize=25);
+plt.yticks(fontsize=25);
+plt.legend(fontsize=25)
+plt.xlabel('Time', fontsize=25)
+plt.ylabel(f'Error $L_2$ (${component}$)', fontsize=25)
+plt.savefig(f'data/images/vstime/nu_{nu}{component}_norm{norm_e}.png')
     
 
 
