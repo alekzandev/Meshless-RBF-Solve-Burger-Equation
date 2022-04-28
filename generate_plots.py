@@ -318,7 +318,7 @@ class build_images(results_analysis):
 # ------------------------------------------------------------------------------------------------------------
 
 # %% Norms
-nu = 0.001
+nu = 0.01
 pol = 'MQ'
 #file = f'data/simulations/TPS/{pol}/500_52_{nu}.json'
 file = f'data/simulations/{pol}/500_52_{nu}.json'
@@ -384,7 +384,8 @@ component = 'v'
 norm_e = '2'
 df = df.reset_index(drop=True)
 plt.subplots(figsize=(15, 15))
-sns.lineplot(data=df, x="ti", y=f'{component}{norm_e}', hue='poly')
+sns.lineplot(data=df, x="ti", y=f'{component}{norm_e}', hue='poly', palette=['red', 'green'], linewidth=4)
+
 plt.yscale('log')
 plt.xticks(fontsize=25);
 plt.yticks(fontsize=25);
