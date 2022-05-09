@@ -315,9 +315,9 @@ class build_images(results_analysis):
 
 # %%Compare results
 nu = 0.001
-RBF = 'MQ'
-file = f'data/simulations/{RBF}/500_52_{nu}.json'
-# file = f'data/simulations/TPS/{RBF}/500_52_{nu}.json'
+RBF = 'Laguerre'
+#file = f'data/simulations/{RBF}/500_52_{nu}.json'
+file = f'data/simulations/TPS/{RBF}/500_52_{nu}.json'
 path = os.path.join(os.getcwd(), file)
 with open(path, 'r') as f:
     result = json.load(f)
@@ -337,7 +337,7 @@ for t in timegrid:
             #simulation.save_image(file, t)
 # ------------------------------------------------------------------------------------------------------------
 # %% Norms
-nu = 0.01
+nu = 0.001
 pol = 'MQ'
 #file = f'data/simulations/TPS/{pol}/500_52_{nu}.json'
 file = f'data/simulations/{pol}/500_52_{nu}.json'
